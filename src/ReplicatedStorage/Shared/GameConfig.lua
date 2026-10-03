@@ -1,9 +1,9 @@
 local GameConfig = {
     DataStoreName = "MergeDominion_MVP_v1",
     StartingCurrency = 120,
-    SoldierCost = 25,
-    PassiveIncomeSeconds = 20,
-    PassiveIncomeAmount = 15,
+    MaxSoldiers = 20,
+    GenerationIntervals = {60, 50, 40, 30, 20, 15, 10},
+    GenerationUpgradeCosts = {50, 75, 100, 125, 150, 200},
     MaxSoldierLevel = 3,
     SoldierStats = {
         [1] = {Health = 30, Attack = 10, Color = Color3.fromRGB(86, 184, 255)},

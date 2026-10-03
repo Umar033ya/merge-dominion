@@ -4,7 +4,16 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local action, stateEvent, resultEvent = remotes.Action, remotes.State, remotes.BattleResult
 local bases = {{Name = "Ember Outpost", Defenders = "2 × Level 1", Color = Color3.fromRGB(207, 79, 67)}, {Name = "Stonewatch", Defenders = "3 × Level 2", Color = Color3.fromRGB(220, 122, 67)}, {Name = "Frostkeep", Defenders = "5 × Level 2", Color = Color3.fromRGB(126, 130, 219)}}
-local state = {Currency = 0, Soldiers = {[1] = 0, [2] = 0, [3] = 0}, Conquered = {}}
+local state = {
+    Currency = 0,
+    Soldiers = {[1] = 0, [2] = 0, [3] = 0},
+    Conquered = {},
+    GenerationInterval = 60,
+    GenerationRemaining = 60,
+    NextUpgradeCost = 50,
+    SoldierCount = 0,
+    MaxSoldiers = 20,
+}
 
 local gui = Instance.new("ScreenGui"); gui.Name, gui.ResetOnSpawn, gui.Parent = "MergeDominionUI", false, player:WaitForChild("PlayerGui")
 local function panel(parent, size, position, color)
@@ -21,27 +30,46 @@ local function button(parent, value, size, position, color)
     local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 8); c.Parent = b
     return b
 end
+local function formatTime(seconds)
+    seconds = math.max(0, math.floor(tonumber(seconds) or 0))
+    return string.format("%02d:%02d", math.floor(seconds / 60), seconds % 60)
+end
+
 local root = panel(gui, UDim2.fromOffset(430, 610), UDim2.fromOffset(24, 24), Color3.fromRGB(17, 25, 36))
 text(root, "MERGE DOMINION", UDim2.fromOffset(390, 36), UDim2.fromOffset(20, 16), Enum.Font.GothamBlack, Color3.fromRGB(121, 210, 255)).TextSize = 25
 text(root, "Main Base → Soldier Yard → Frontier", UDim2.fromOffset(390, 24), UDim2.fromOffset(20, 50), Enum.Font.Gotham, Color3.fromRGB(170, 185, 201)).TextSize = 14
-local currency = text(root, "COINS  0", UDim2.fromOffset(190, 40), UDim2.fromOffset(20, 88), Enum.Font.GothamBold, Color3.fromRGB(255, 213, 104)); currency.TextSize = 22
-local recruit = button(root, "RECRUIT • 25 COINS", UDim2.fromOffset(180, 38), UDim2.fromOffset(226, 88), Color3.fromRGB(43, 143, 207)); recruit.MouseButton1Click:Connect(function() action:FireServer("Spawn") end)
-text(root, "YOUR ARMY", UDim2.fromOffset(380, 25), UDim2.fromOffset(20, 145), Enum.Font.GothamBold, Color3.fromRGB(170, 185, 201)).TextSize = 13
-local inventory = text(root, "", UDim2.fromOffset(380, 80), UDim2.fromOffset(20, 170), Enum.Font.GothamBold, Color3.fromRGB(235, 240, 247)); inventory.TextSize = 19; inventory.TextYAlignment = Enum.TextYAlignment.Top
-local merge = button(root, "MERGE TWO MATCHING SOLDIERS", UDim2.fromOffset(380, 38), UDim2.fromOffset(20, 252), Color3.fromRGB(100, 71, 180)); merge.MouseButton1Click:Connect(function() action:FireServer("Merge") end)
-text(root, "ENEMY FRONTIER", UDim2.fromOffset(380, 25), UDim2.fromOffset(20, 315), Enum.Font.GothamBold, Color3.fromRGB(170, 185, 201)).TextSize = 13
+local currency = text(root, "COINS  0", UDim2.fromOffset(390, 32), UDim2.fromOffset(20, 84), Enum.Font.GothamBold, Color3.fromRGB(255, 213, 104)); currency.TextSize = 21
+local generation = text(root, "", UDim2.fromOffset(390, 38), UDim2.fromOffset(20, 119), Enum.Font.GothamBold, Color3.fromRGB(203, 255, 214)); generation.TextSize = 14; generation.TextYAlignment = Enum.TextYAlignment.Center
+local upgrade = button(root, "", UDim2.fromOffset(380, 34), UDim2.fromOffset(20, 158), Color3.fromRGB(55, 145, 105)); upgrade.MouseButton1Click:Connect(function() action:FireServer("UpgradeGeneration") end)
+text(root, "YOUR ARMY", UDim2.fromOffset(380, 22), UDim2.fromOffset(20, 204), Enum.Font.GothamBold, Color3.fromRGB(170, 185, 201)).TextSize = 13
+local inventory = text(root, "", UDim2.fromOffset(380, 60), UDim2.fromOffset(20, 226), Enum.Font.GothamBold, Color3.fromRGB(235, 240, 247)); inventory.TextSize = 18; inventory.TextYAlignment = Enum.TextYAlignment.Top
+local merge = button(root, "MERGE TWO MATCHING SOLDIERS", UDim2.fromOffset(380, 36), UDim2.fromOffset(20, 293), Color3.fromRGB(100, 71, 180)); merge.MouseButton1Click:Connect(function() action:FireServer("Merge") end)
+text(root, "ENEMY FRONTIER", UDim2.fromOffset(380, 22), UDim2.fromOffset(20, 345), Enum.Font.GothamBold, Color3.fromRGB(170, 185, 201)).TextSize = 13
 local list = {}
 for i, base in ipairs(bases) do
-    local row = panel(root, UDim2.fromOffset(380, 54), UDim2.fromOffset(20, 345 + (i - 1) * 62), Color3.fromRGB(28, 39, 54))
-    text(row, i .. "  " .. base.Name, UDim2.fromOffset(230, 26), UDim2.fromOffset(12, 7), Enum.Font.GothamBold, Color3.new(1,1,1)).TextSize = 15
-    local status = text(row, base.Defenders, UDim2.fromOffset(230, 20), UDim2.fromOffset(12, 30), Enum.Font.Gotham, Color3.fromRGB(180, 194, 210)); status.TextSize = 12
-    local attack = button(row, "ATTACK", UDim2.fromOffset(100, 34), UDim2.fromOffset(267, 10), base.Color); attack.MouseButton1Click:Connect(function() action:FireServer("Attack", i) end)
+    local row = panel(root, UDim2.fromOffset(380, 50), UDim2.fromOffset(20, 370 + (i - 1) * 57), Color3.fromRGB(28, 39, 54))
+    text(row, i .. "  " .. base.Name, UDim2.fromOffset(230, 24), UDim2.fromOffset(12, 5), Enum.Font.GothamBold, Color3.new(1,1,1)).TextSize = 15
+    local status = text(row, base.Defenders, UDim2.fromOffset(230, 19), UDim2.fromOffset(12, 28), Enum.Font.Gotham, Color3.fromRGB(180, 194, 210)); status.TextSize = 12
+    local attack = button(row, "ATTACK", UDim2.fromOffset(100, 32), UDim2.fromOffset(267, 9), base.Color); attack.MouseButton1Click:Connect(function() action:FireServer("Attack", i) end)
     list[i] = {Status = status, Button = attack}
 end
-local result = text(root, "Select a frontier base to attack.", UDim2.fromOffset(380, 34), UDim2.fromOffset(20, 545), Enum.Font.GothamBold, Color3.fromRGB(255, 213, 104)); result.TextSize = 13
+local result = text(root, "Select a frontier base to attack.", UDim2.fromOffset(380, 28), UDim2.fromOffset(20, 556), Enum.Font.GothamBold, Color3.fromRGB(255, 213, 104)); result.TextSize = 13
+
 local function render()
     currency.Text = "COINS  " .. state.Currency
+    generation.Text = string.format("GENERATION  %ds  •  NEXT SOLDIER IN %s\nCAPACITY  %d / %d", state.GenerationInterval, state.SoldierCount >= state.MaxSoldiers and "READY / FULL" or formatTime(state.GenerationRemaining), state.SoldierCount, state.MaxSoldiers)
     inventory.Text = string.format("Level 1   %d\nLevel 2   %d\nLevel 3   %d", state.Soldiers[1], state.Soldiers[2], state.Soldiers[3])
+    if state.NextUpgradeCost then
+        upgrade.Text = "UPGRADE SPEED  •  " .. state.NextUpgradeCost .. " COINS"
+        upgrade.Active = state.Currency >= state.NextUpgradeCost
+        upgrade.AutoButtonColor = upgrade.Active
+        upgrade.BackgroundColor3 = upgrade.Active and Color3.fromRGB(55, 145, 105) or Color3.fromRGB(68, 82, 86)
+    else
+        upgrade.Text = "GENERATION SPEED MAXED"
+        upgrade.Active = false
+        upgrade.AutoButtonColor = false
+        upgrade.BackgroundColor3 = Color3.fromRGB(68, 82, 86)
+    end
     for i, base in ipairs(bases) do
         local id = ({"EmberOutpost", "Stonewatch", "Frostkeep"})[i]
         local conquered = state.Conquered[id] == true
@@ -52,6 +80,15 @@ local function render()
         list[i].Button.AutoButtonColor = not conquered
     end
 end
-stateEvent.OnClientEvent:Connect(function(nextState) state = nextState; render() end)
-resultEvent.OnClientEvent:Connect(function(payload) result.Text = payload.Message or ""; result.TextColor3 = payload.Won and Color3.fromRGB(112, 238, 163) or Color3.fromRGB(255, 213, 104); render() end)
-render(); action:FireServer("RequestState")
+
+stateEvent.OnClientEvent:Connect(function(nextState)
+    state = nextState
+    render()
+end)
+resultEvent.OnClientEvent:Connect(function(payload)
+    result.Text = payload.Message or ""
+    result.TextColor3 = payload.Won and Color3.fromRGB(112, 238, 163) or Color3.fromRGB(255, 213, 104)
+    render()
+end)
+render()
+action:FireServer("RequestState")
