@@ -82,6 +82,20 @@ local function rock(parent, position, size)
     r.Shape = Enum.PartType.Ball
 end
 
+local function checkpoint(parent, id, name, position)
+    local model = Instance.new("Model")
+    model.Name = id
+    model:SetAttribute("CheckpointId", id)
+    model:SetAttribute("Purpose", "FutureRespawnCheckpoint")
+    model.Parent = parent
+
+    cylinder(model, "CheckpointPad", 5, 0.8, position + Vector3.new(0, 0.4, 0), Color3.fromRGB(232, 183, 63), Enum.Material.Metal)
+    cylinder(model, "CheckpointGlow", 3.5, 0.18, position + Vector3.new(0, 0.9, 0), Color3.fromRGB(255, 226, 103), Enum.Material.Neon)
+    part(model, "CheckpointPost", Vector3.new(0.8, 4, 0.8), position + Vector3.new(0, 2.4, 0), COLORS.Stone, Enum.Material.Metal)
+    part(model, "CheckpointFlag", Vector3.new(5, 2, 0.25), position + Vector3.new(2.3, 3.3, 0), Color3.fromRGB(255, 216, 91), Enum.Material.Fabric)
+    label(model, "CHECKPOINT\n" .. name, position + Vector3.new(0, 3, 0), Color3.fromRGB(255, 241, 164), 220)
+end
+
 local function mainBase(world)
     local model = Instance.new("Model")
     model.Name = "MainBase"
@@ -111,9 +125,9 @@ local function mainBase(world)
     yard.Name = "SoldierYard"
     yard:SetAttribute("Purpose", "SoldierCreationAndMergeArea")
     yard.Parent = world
-    part(yard, "YardFloor", Vector3.new(38, 0.6, 24), Vector3.new(0, 1.3, 34), COLORS.GroundAccent, Enum.Material.Ground)
-    part(yard, "YardBorderFront", Vector3.new(38, 1.2, 1), Vector3.new(0, 1.9, 22), COLORS.MainLight, Enum.Material.Neon)
-    part(yard, "YardBorderBack", Vector3.new(38, 1.2, 1), Vector3.new(0, 1.9, 46), COLORS.MainLight, Enum.Material.Neon)
+    part(yard, "YardFloor", Vector3.new(38, 0.4, 24), Vector3.new(0, 0.2, 34), COLORS.GroundAccent, Enum.Material.Ground)
+    part(yard, "YardBorderFront", Vector3.new(38, 1.2, 1), Vector3.new(0, 0.8, 22), COLORS.MainLight, Enum.Material.Neon)
+    part(yard, "YardBorderBack", Vector3.new(38, 1.2, 1), Vector3.new(0, 0.8, 46), COLORS.MainLight, Enum.Material.Neon)
     for _, x in ipairs({-14, 14}) do
         part(yard, "YardPost", Vector3.new(1, 5, 1), Vector3.new(x, 3.5, 34), COLORS.Wood, Enum.Material.Wood)
     end
@@ -158,8 +172,8 @@ function WorldBuilder.build()
     world.Name = "MergeDominionWorld"
     world.Parent = workspace
 
-    part(world, "ArenaGround", Vector3.new(280, 1, 230), Vector3.new(0, -1, 0), COLORS.Ground, Enum.Material.Grass)
-    part(world, "ArenaInset", Vector3.new(262, 0.3, 212), Vector3.new(0, -0.42, 0), COLORS.GroundAccent, Enum.Material.Ground)
+    part(world, "ArenaGround", Vector3.new(280, 2, 230), Vector3.new(0, -1, 0), COLORS.Ground, Enum.Material.Grass)
+    part(world, "ArenaInset", Vector3.new(262, 0.05, 212), Vector3.new(0, 0.025, 0), COLORS.GroundAccent, Enum.Material.Ground)
 
     road(world, "MainRoad", Vector3.new(12, 1, 150), Vector3.new(0, -0.2, -18))
     road(world, "EastRoad", Vector3.new(100, 1, 10), Vector3.new(52, -0.18, -25))
@@ -170,6 +184,14 @@ function WorldBuilder.build()
     for index, enemy in ipairs(GameConfig.EnemyBases) do
         enemyBase(world, index, enemy)
     end
+
+    local checkpointFolder = Instance.new("Folder")
+    checkpointFolder.Name = "Checkpoints"
+    checkpointFolder.Parent = world
+    checkpoint(checkpointFolder, "MainBaseCheckpoint", "Main Base", Vector3.new(0, 0, 18))
+    checkpoint(checkpointFolder, "EmberCheckpoint", "Ember Outpost", Vector3.new(0, 0, -88))
+    checkpoint(checkpointFolder, "StonewatchCheckpoint", "Stonewatch", Vector3.new(83, 0, -25))
+    checkpoint(checkpointFolder, "FrostkeepCheckpoint", "Frostkeep", Vector3.new(-83, 0, 35))
 
     for _, item in ipairs({
         {Vector3.new(-58, 0, 78), 1.2}, {Vector3.new(58, 0, 78), 1},

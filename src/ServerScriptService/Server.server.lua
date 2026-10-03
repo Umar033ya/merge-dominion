@@ -1,14 +1,15 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
-local DataService = require(script.Parent.Services.DataService)
-local CombatService = require(script.Parent.Services.CombatService)
-local WorldBuilder = require(script.Parent.Services.WorldBuilder)
 
 local remotes = Instance.new("Folder"); remotes.Name = "Remotes"; remotes.Parent = ReplicatedStorage
 local actionEvent = Instance.new("RemoteEvent"); actionEvent.Name = "Action"; actionEvent.Parent = remotes
 local stateEvent = Instance.new("RemoteEvent"); stateEvent.Name = "State"; stateEvent.Parent = remotes
 local resultEvent = Instance.new("RemoteEvent"); resultEvent.Name = "BattleResult"; resultEvent.Parent = remotes
+
+local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
+local DataService = require(script.Parent.Services.DataService)
+local CombatService = require(script.Parent.Services.CombatService)
+local WorldBuilder = require(script.Parent.Services.WorldBuilder)
 
 local function snapshot(state)
     return {Currency = state.Currency, Soldiers = {[1] = state.Soldiers[1], [2] = state.Soldiers[2], [3] = state.Soldiers[3]}, Conquered = state.Conquered}
@@ -24,7 +25,7 @@ local function addSoldierVisual(player, level, ordinal)
     local stats = GameConfig.SoldierStats[level]
     local model = Instance.new("Model"); model.Name = "Soldier_L" .. level; model.Parent = folder
     local body = Instance.new("Part"); body.Name, body.Size, body.Color, body.Material = "Body", Vector3.new(2.5, 3.5, 2.5), stats.Color, Enum.Material.Neon
-    body.Anchored, body.Position, body.Parent = true, Vector3.new(-12 + (ordinal % 8) * 4, 3, 28 + math.floor(ordinal / 8) * 5), model
+    body.Anchored, body.Position, body.Parent = true, Vector3.new(-12 + (ordinal % 8) * 4, 2.15, 28 + math.floor(ordinal / 8) * 5), model
     model:SetAttribute("Level", level)
 end
 local function syncSoldierVisuals(player, state)

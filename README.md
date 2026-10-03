@@ -7,7 +7,7 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 - `default.project.json` — Rojo project mapping.
 - `src/ReplicatedStorage/Shared/GameConfig.lua` — balance, soldier stats, and enemy base definitions.
 - `src/ReplicatedStorage/Shared/StateSchema.lua` — progression defaults and save-data sanitization.
-- `src/ServerScriptService/Services/DataService.lua` — DataStore load/save lifecycle.
+- `src/ServerScriptService/Services/DataService.lua` — DataStore load/save lifecycle with an in-memory Studio fallback.
 - `src/ServerScriptService/Services/CombatService.lua` — deterministic power comparison combat.
 - `src/ServerScriptService/Services/WorldBuilder.lua` — runtime-generated arena, polished safe main base, Soldier Yard, roads, decorations, and enemy bases.
 - `src/ServerScriptService/Server.server.lua` — remotes, player actions, recruitment, merging, rewards, and passive income.
@@ -37,6 +37,14 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 - A compact road network connects the Main Base to the three enemy-base approaches.
 - Enemy bases retain the same gameplay data but gain progressively stronger visual defenses: larger keeps, taller towers, and brighter beacons.
 - Trees, rocks, ground accents, and road borders provide visual separation without creating a large map.
+- A solid ground floor keeps buildings, roads, Soldier Yard objects, and decorations grounded.
+- Physical checkpoint markers are placed near the Main Base and before Ember Outpost, Stonewatch, and Frostkeep. They are prepared for a future respawn system but do not change respawn behavior yet.
+
+## Studio DataStore behavior
+
+- In an unpublished Studio place, the server automatically uses an in-memory progression state so the world, remotes, UI, and gameplay can run without DataStore access.
+- If a published Studio session cannot access DataStore, the first failed operation switches the current server to the same in-memory fallback.
+- Published Roblox games retain DataStore persistence when the service is available. To test persistence, publish the experience and enable **Game Settings → Security → Enable Studio Access to API Services**.
 
 ## Known testing notes
 
