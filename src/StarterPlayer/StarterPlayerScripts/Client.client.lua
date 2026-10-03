@@ -1,8 +1,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ContextActionService = game:GetService("ContextActionService")
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
-local action, stateEvent, resultEvent = remotes.Action, remotes.State, remotes.BattleResult
+local action, stateEvent, resultEvent, sprintEvent = remotes.Action, remotes.State, remotes.BattleResult, remotes.Sprint
 local bases = {{Name = "Ember Outpost", Defenders = "2 × Level 1", Color = Color3.fromRGB(207, 79, 67)}, {Name = "Stonewatch", Defenders = "3 × Level 2", Color = Color3.fromRGB(220, 122, 67)}, {Name = "Frostkeep", Defenders = "5 × Level 2", Color = Color3.fromRGB(126, 130, 219)}}
 local state = {
     Currency = 0,
@@ -35,7 +36,17 @@ local function formatTime(seconds)
     return string.format("%02d:%02d", math.floor(seconds / 60), seconds % 60)
 end
 
-local root = panel(gui, UDim2.fromOffset(430, 610), UDim2.fromOffset(24, 24), Color3.fromRGB(17, 25, 36))
+local menuButton = button(gui, "MENU", UDim2.fromOffset(112, 42), UDim2.fromOffset(24, 24), Color3.fromRGB(43, 143, 207))
+local root = panel(gui, UDim2.fromOffset(430, 600), UDim2.fromOffset(24, 76), Color3.fromRGB(17, 25, 36))
+root.Visible = false
+local menuOpen = false
+local function setMenuOpen(open)
+    menuOpen = open
+    root.Visible = open
+    menuButton.Text = open and "CLOSE MENU" or "MENU"
+end
+menuButton.MouseButton1Click:Connect(function() setMenuOpen(not menuOpen) end)
+
 text(root, "MERGE DOMINION", UDim2.fromOffset(390, 36), UDim2.fromOffset(20, 16), Enum.Font.GothamBlack, Color3.fromRGB(121, 210, 255)).TextSize = 25
 text(root, "Main Base → Soldier Yard → Frontier", UDim2.fromOffset(390, 24), UDim2.fromOffset(20, 50), Enum.Font.Gotham, Color3.fromRGB(170, 185, 201)).TextSize = 14
 local currency = text(root, "COINS  0", UDim2.fromOffset(390, 32), UDim2.fromOffset(20, 84), Enum.Font.GothamBold, Color3.fromRGB(255, 213, 104)); currency.TextSize = 21
@@ -43,7 +54,7 @@ local generation = text(root, "", UDim2.fromOffset(390, 38), UDim2.fromOffset(20
 local upgrade = button(root, "", UDim2.fromOffset(380, 34), UDim2.fromOffset(20, 158), Color3.fromRGB(55, 145, 105)); upgrade.MouseButton1Click:Connect(function() action:FireServer("UpgradeGeneration") end)
 text(root, "YOUR ARMY", UDim2.fromOffset(380, 22), UDim2.fromOffset(20, 204), Enum.Font.GothamBold, Color3.fromRGB(170, 185, 201)).TextSize = 13
 local inventory = text(root, "", UDim2.fromOffset(380, 60), UDim2.fromOffset(20, 226), Enum.Font.GothamBold, Color3.fromRGB(235, 240, 247)); inventory.TextSize = 18; inventory.TextYAlignment = Enum.TextYAlignment.Top
-local merge = button(root, "MERGE TWO MATCHING SOLDIERS", UDim2.fromOffset(380, 36), UDim2.fromOffset(20, 293), Color3.fromRGB(100, 71, 180)); merge.MouseButton1Click:Connect(function() action:FireServer("Merge") end)
+text(root, "Walk to a soldier and press E to select it for merging.", UDim2.fromOffset(380, 30), UDim2.fromOffset(20, 293), Enum.Font.GothamMedium, Color3.fromRGB(203, 214, 225)).TextSize = 13
 text(root, "ENEMY FRONTIER", UDim2.fromOffset(380, 22), UDim2.fromOffset(20, 345), Enum.Font.GothamBold, Color3.fromRGB(170, 185, 201)).TextSize = 13
 local list = {}
 for i, base in ipairs(bases) do
@@ -80,6 +91,29 @@ local function render()
         list[i].Button.AutoButtonColor = not conquered
     end
 end
+
+local sprintHeld = false
+local function setSprint(held)
+    if sprintHeld == held then return end
+    sprintHeld = held
+    sprintEvent:FireServer(held)
+end
+local function sprintAction(_, inputState)
+    if inputState == Enum.UserInputState.Begin then
+        setSprint(true)
+    elseif inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then
+        setSprint(false)
+    end
+    return Enum.ContextActionResult.Pass
+end
+ContextActionService:BindAction("MergeDominionSprint", sprintAction, true, Enum.KeyCode.LeftShift)
+ContextActionService:SetTitle("MergeDominionSprint", "SPRINT")
+task.spawn(function()
+    while player.Parent do
+        task.wait(0.2)
+        if sprintHeld then sprintEvent:FireServer(true) end
+    end
+end)
 
 stateEvent.OnClientEvent:Connect(function(nextState)
     state = nextState

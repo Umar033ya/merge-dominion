@@ -48,6 +48,13 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 - Conquering enemy bases still awards the existing coin rewards. Those coins can purchase generation-speed upgrades: 60s, 50s, 40s, 30s, 20s, 15s, then 10s.
 - The HUD shows the server-reported countdown, current interval, capacity, next upgrade cost, and upgrade control. There is no manual recruit button.
 
+## Soldier interaction and movement polish
+
+- Soldiers use small rounded floating cards with a friendly identity, readable level, and level-specific colors.
+- Walk to a soldier and use the `E` ProximityPrompt to select it, then select another soldier of the same level to merge. The server validates ownership, level, and inventory before changing state.
+- Hold **Left Shift** to sprint. The sprint action also exposes a touch button through Roblox `ContextActionService`; releasing it returns movement to normal speed.
+- The side panel is hidden by default behind a small `MENU` button so the world stays visible. It still contains currency, generation status, capacity, speed upgrade, merge instructions, enemy bases, and battle results.
+
 ## Rojo build versus Play mode
 
 `default.project.json` intentionally maps source scripts and modules into `ReplicatedStorage`, `ServerScriptService`, and `StarterPlayer`; it does not map a static `Workspace` model. `WorldBuilder.lua` is required by `Server.server.lua` and runs `WorldBuilder.build()` when the server starts. Therefore `rojo build` creates a place containing the code, while the visible map is created at runtime after pressing **Play**. There are no duplicate or legacy world generators in this repository.
