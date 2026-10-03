@@ -16,10 +16,11 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 ## Open in Roblox Studio
 
 1. Install the Rojo Studio plugin and the Rojo CLI.
-2. From this repository, run `rojo serve`.
+2. From this repository, run `rojo serve default.project.json`.
 3. In Roblox Studio, connect the Rojo plugin to the served project and sync it.
-4. Publish the place under your Roblox account before testing persistence. In **Game Settings → Security**, enable **Enable Studio Access to API Services** for DataStore testing.
-5. Press Play. The server creates the entire arena and the client creates the HUD; no manual map or UI construction is required.
+4. To produce a local place file instead, run `rojo build default.project.json -o MergeDominion.rbxlx`, then open `MergeDominion.rbxlx` in Roblox Studio.
+5. Publish the place under your Roblox account before testing persistence. In **Game Settings → Security**, enable **Enable Studio Access to API Services** for DataStore testing.
+6. Press Play. The server creates the entire arena and the client creates the HUD; no manual map or UI construction is required.
 
 ## MVP behavior
 
@@ -32,5 +33,6 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 ## Known testing notes
 
 - DataStore persistence requires a published experience and Studio API Services enabled; otherwise the game falls back to a fresh in-memory session and logs the save/load warning.
+- Static validation covers project mapping, required files, remote direction, state ownership, and Luau source review; actual Roblox API execution, Rojo synchronization, UI rendering, and DataStore behavior still require Roblox Studio.
 - This repository does not include a binary `.rbxlx` place file; the Rojo project is the source of truth and generates all runtime Instances. Roblox Studio testing requires the Rojo plugin/CLI connection.
 - The MVP intentionally omits PvP, trading, pets, complex animations, monetization, and large-scale troop simulation.

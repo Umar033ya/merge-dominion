@@ -1,8 +1,10 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local StateSchema = {}
 
 function StateSchema.new()
     return {
-        Currency = 120,
+        Currency = GameConfig.StartingCurrency,
         Soldiers = {[1] = 0, [2] = 0, [3] = 0},
         Conquered = {},
     }
@@ -13,7 +15,7 @@ function StateSchema.sanitize(raw)
     if type(raw) ~= "table" then return state end
     state.Currency = math.max(0, math.floor(tonumber(raw.Currency) or state.Currency))
     if type(raw.Soldiers) == "table" then
-        for level = 1, 3 do state.Soldiers[level] = math.max(0, math.floor(tonumber(raw.Soldiers[level]) or 0)) end
+        for level = 1, GameConfig.MaxSoldierLevel do state.Soldiers[level] = math.max(0, math.floor(tonumber(raw.Soldiers[level]) or 0)) end
     end
     if type(raw.Conquered) == "table" then
         for id, conquered in pairs(raw.Conquered) do if conquered == true then state.Conquered[tostring(id)] = true end end

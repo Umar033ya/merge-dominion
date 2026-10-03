@@ -15,7 +15,9 @@ local function label(parent, text, position, color)
     local t = Instance.new("TextLabel")
     t.BackgroundTransparency, t.Size, t.Text, t.TextColor3, t.TextScaled, t.Font = 1, UDim2.fromScale(1, 1), text, color, true, Enum.Font.GothamBold
     t.Parent, gui.Parent = gui, parent
-    gui.Adornee = part(parent, "LabelAnchor", Vector3.new(1, 1, 1), position, Color3.new(1,1,1))
+    local anchor = part(parent, "LabelAnchor", Vector3.new(1, 1, 1), position, Color3.new(1,1,1))
+    anchor.Transparency, anchor.CanCollide, anchor.CanTouch, anchor.CanQuery = 1, false, false, false
+    gui.Adornee = anchor
 end
 
 function WorldBuilder.build()
