@@ -1,0 +1,30 @@
+{
+  "name": "MergeDominion",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Shared": {
+        "$path": "src/ReplicatedStorage/Shared"
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Services": {
+        "$path": "src/ServerScriptService/Services"
+      },
+      "Server": {
+        "$path": "src/ServerScriptService/Server.server.lua"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Client": {
+          "$path": "src/StarterPlayer/StarterPlayerScripts/Client.client.lua"
+        }
+      }
+    }
+  }
+}
