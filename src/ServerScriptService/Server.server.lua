@@ -24,7 +24,7 @@ local function addSoldierVisual(player, level, ordinal)
     local stats = GameConfig.SoldierStats[level]
     local model = Instance.new("Model"); model.Name = "Soldier_L" .. level; model.Parent = folder
     local body = Instance.new("Part"); body.Name, body.Size, body.Color, body.Material = "Body", Vector3.new(2.5, 3.5, 2.5), stats.Color, Enum.Material.Neon
-    body.Anchored, body.Position, body.Parent = true, Vector3.new(-12 + (ordinal % 8) * 4, 3, 48 + math.floor(ordinal / 8) * 5), model
+    body.Anchored, body.Position, body.Parent = true, Vector3.new(-12 + (ordinal % 8) * 4, 3, 28 + math.floor(ordinal / 8) * 5), model
     model:SetAttribute("Level", level)
 end
 local function syncSoldierVisuals(player, state)

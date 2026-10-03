@@ -9,7 +9,7 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 - `src/ReplicatedStorage/Shared/StateSchema.lua` — progression defaults and save-data sanitization.
 - `src/ServerScriptService/Services/DataService.lua` — DataStore load/save lifecycle.
 - `src/ServerScriptService/Services/CombatService.lua` — deterministic power comparison combat.
-- `src/ServerScriptService/Services/WorldBuilder.lua` — runtime-generated arena, safe main base, and enemy bases.
+- `src/ServerScriptService/Services/WorldBuilder.lua` — runtime-generated arena, polished safe main base, Soldier Yard, roads, decorations, and enemy bases.
 - `src/ServerScriptService/Server.server.lua` — remotes, player actions, recruitment, merging, rewards, and passive income.
 - `src/StarterPlayer/StarterPlayerScripts/Client.client.lua` — generated HUD and interaction controls.
 
@@ -29,6 +29,14 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 - Combat compares total player attack to the target's fixed defender attack; ties win and outcomes are shown in the HUD.
 - Victories mark the enemy base conquered and award its configured reward.
 - Currency, soldier counts, and conquered base IDs are saved in `MergeDominion_MVP_v1`.
+
+## Phase 2 world foundation
+
+- The permanent Main Base is a distinct blue house with a spawn point, entrance, flag, and safe label.
+- The Soldier Yard sits directly in front of the Main Base; generated soldier models appear there.
+- A compact road network connects the Main Base to the three enemy-base approaches.
+- Enemy bases retain the same gameplay data but gain progressively stronger visual defenses: larger keeps, taller towers, and brighter beacons.
+- Trees, rocks, ground accents, and road borders provide visual separation without creating a large map.
 
 ## Known testing notes
 

@@ -23,7 +23,7 @@ local function button(parent, value, size, position, color)
 end
 local root = panel(gui, UDim2.fromOffset(430, 610), UDim2.fromOffset(24, 24), Color3.fromRGB(17, 25, 36))
 text(root, "MERGE DOMINION", UDim2.fromOffset(390, 36), UDim2.fromOffset(20, 16), Enum.Font.GothamBlack, Color3.fromRGB(121, 210, 255)).TextSize = 25
-text(root, "Build your army. Conquer the frontier.", UDim2.fromOffset(390, 24), UDim2.fromOffset(20, 50), Enum.Font.Gotham, Color3.fromRGB(170, 185, 201)).TextSize = 14
+text(root, "Main Base → Soldier Yard → Frontier", UDim2.fromOffset(390, 24), UDim2.fromOffset(20, 50), Enum.Font.Gotham, Color3.fromRGB(170, 185, 201)).TextSize = 14
 local currency = text(root, "COINS  0", UDim2.fromOffset(190, 40), UDim2.fromOffset(20, 88), Enum.Font.GothamBold, Color3.fromRGB(255, 213, 104)); currency.TextSize = 22
 local recruit = button(root, "RECRUIT • 25 COINS", UDim2.fromOffset(180, 38), UDim2.fromOffset(226, 88), Color3.fromRGB(43, 143, 207)); recruit.MouseButton1Click:Connect(function() action:FireServer("Spawn") end)
 text(root, "YOUR ARMY", UDim2.fromOffset(380, 25), UDim2.fromOffset(20, 145), Enum.Font.GothamBold, Color3.fromRGB(170, 185, 201)).TextSize = 13
