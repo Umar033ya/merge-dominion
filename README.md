@@ -18,9 +18,10 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 1. Install the Rojo Studio plugin and the Rojo CLI.
 2. From this repository, run `rojo serve default.project.json`.
 3. In Roblox Studio, connect the Rojo plugin to the served project and sync it.
-4. To produce a local place file instead, run `rojo build default.project.json -o MergeDominion.rbxlx`, then open `MergeDominion.rbxlx` in Roblox Studio.
-5. Publish the place under your Roblox account before testing persistence. In **Game Settings → Security**, enable **Enable Studio Access to API Services** for DataStore testing.
-6. Press Play. The server creates the entire arena and the client creates the HUD; no manual map or UI construction is required.
+4. To produce a local place file instead, run `rojo build default.project.json -o MergeDominion.rbxlx`, then open the newly generated `MergeDominion.rbxlx` in Roblox Studio.
+5. Press **Play**. The server creates the entire arena and the client creates the HUD; no manual map or UI construction is required. The generated place will not show the runtime-built arena while it is only in Edit mode.
+6. In Play mode, the server Explorer should contain `Workspace > MergeDominionWorld`, including `ArenaGround`, `MainBase`, `SoldierYard`, `Checkpoints`, and the three enemy-base models.
+7. Publish the place under your Roblox account before testing persistence. In **Game Settings → Security**, enable **Enable Studio Access to API Services** for DataStore testing.
 
 ## MVP behavior
 
@@ -39,6 +40,10 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 - Trees, rocks, ground accents, and road borders provide visual separation without creating a large map.
 - A solid ground floor keeps buildings, roads, Soldier Yard objects, and decorations grounded.
 - Physical checkpoint markers are placed near the Main Base and before Ember Outpost, Stonewatch, and Frostkeep. They are prepared for a future respawn system but do not change respawn behavior yet.
+
+## Rojo build versus Play mode
+
+`default.project.json` intentionally maps source scripts and modules into `ReplicatedStorage`, `ServerScriptService`, and `StarterPlayer`; it does not map a static `Workspace` model. `WorldBuilder.lua` is required by `Server.server.lua` and runs `WorldBuilder.build()` when the server starts. Therefore `rojo build` creates a place containing the code, while the visible map is created at runtime after pressing **Play**. There are no duplicate or legacy world generators in this repository.
 
 ## Studio DataStore behavior
 
