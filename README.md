@@ -1,16 +1,16 @@
 # Merge Dominion
 
-Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 soldiers, merge matching soldiers into Levels 2 and 3, and attack three progressively stronger enemy bases. The main base is always safe.
+Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 soldiers, merge matching soldiers through Level 20, and physically travel to five progressively stronger enemy cities. The Main Base is always safe.
 
 ## Project structure
 
 - `default.project.json` — Rojo project mapping.
-- `src/ReplicatedStorage/Shared/GameConfig.lua` — balance, soldier stats, and enemy base definitions.
+- `src/ReplicatedStorage/Shared/GameConfig.lua` — balance, Level 1–20 soldier stats, and enemy city definitions.
 - `src/ReplicatedStorage/Shared/StateSchema.lua` — progression defaults and save-data sanitization.
 - `src/ServerScriptService/Services/DataService.lua` — DataStore load/save lifecycle with an in-memory Studio fallback.
 - `src/ServerScriptService/Services/CombatService.lua` — deterministic power comparison combat.
-- `src/ServerScriptService/Services/WorldBuilder.lua` — runtime-generated arena, polished safe main base, Soldier Yard, roads, decorations, and enemy bases.
-- `src/ServerScriptService/Server.server.lua` — remotes, player actions, recruitment, merging, rewards, and passive income.
+- `src/ServerScriptService/Services/WorldBuilder.lua` — runtime-generated arena, polished safe Main Base, Soldier Yard, roads, decorations, and enemy cities.
+- `src/ServerScriptService/Server.server.lua` — remotes, player actions, generated soldier characters, merging, rewards, and passive income.
 - `src/StarterPlayer/StarterPlayerScripts/Client.client.lua` — generated HUD and interaction controls.
 
 ## Open in Roblox Studio
@@ -58,8 +58,10 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 
 ## Soldier interaction and movement polish
 
-- Soldiers use small rounded floating cards with a friendly identity, readable level, and level-specific colors.
+- Soldiers use lightweight blocky Roblox-style characters with heads, helmets, uniforms, arms, legs, boots, and level-specific equipment. Levels 1–5 progress from recruit/vest/sword/archer to vanguard gear; Levels 6–12 add advanced armor, weapons, emblems, and elite equipment; Levels 13–16 add commander capes and crests; Levels 17–19 add legendary aura styling; Level 20 is the unique Hero with a crown and sparkles.
+- Each level has a distinct role name, color treatment, equipment progression, and floating identity card.
 - Walk to a soldier and use the `E` ProximityPrompt to select it, then select another soldier of the same level to merge. The server validates ownership, level, and inventory before changing state.
+- A successful merge removes both source models, creates the higher-level character, and emits a short lightweight particle burst at the merge location.
 - Hold **Left Shift** to sprint. The sprint action also exposes a touch button through Roblox `ContextActionService`; releasing it returns movement to normal speed.
 - The side panel is hidden by default behind a small `MENU` button so the world stays visible. It still contains currency, generation status, capacity, speed upgrade, merge instructions, enemy cities, city income, and battle results.
 

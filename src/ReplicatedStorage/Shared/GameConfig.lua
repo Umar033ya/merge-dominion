@@ -26,11 +26,12 @@ local palettes = {
     {Color = Color3.fromRGB(205, 135, 255), AccentColor = Color3.fromRGB(239, 205, 255), Name = "Guardian"},
     {Color = Color3.fromRGB(255, 112, 151), AccentColor = Color3.fromRGB(255, 198, 216), Name = "Knight"},
 }
+local levelNames = {"Recruit", "Trooper", "Swordsman", "Archer", "Vanguard", "Paladin", "Ranger", "Sentinel", "Captain", "Warden", "Elite", "Tactician", "Commander", "Marshal", "General", "War Chief", "Mythic", "Arcane", "Legendary", "Hero"}
 for level = 1, GameConfig.MaxSoldierLevel do
     local palette = palettes[((level - 1) % #palettes) + 1]
     local tier = math.floor((level - 1) / 5)
     GameConfig.SoldierStats[level] = {
-        Name = level == 20 and "Legend" or palette.Name,
+        Name = levelNames[level] or palette.Name,
         Health = 30 + level * 18 + tier * 12,
         Attack = 10 + level * 8 + tier * 5,
         Color = palette.Color,
