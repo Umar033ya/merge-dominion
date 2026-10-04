@@ -58,7 +58,7 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 
 ## Soldier interaction and movement polish
 
-- Soldiers use lightweight blocky Roblox-style characters with heads, helmets, uniforms, arms, legs, boots, and level-specific equipment. Levels 1–5 progress from recruit/vest/sword/archer to vanguard gear; Levels 6–12 add advanced armor, weapons, emblems, and elite equipment; Levels 13–16 add commander capes and crests; Levels 17–19 add legendary aura styling; Level 20 is the unique Hero with a crown and sparkles.
+- Soldiers use lightweight stylized Roblox characters built from grouped Parts with built-in `SpecialMesh` geometry for rounded heads, helmets, torso, limbs, boots, armor, and equipment. Levels 1–5 progress from recruit/vest/sword/archer to vanguard gear; Levels 6–12 add advanced armor, weapons, emblems, and elite equipment; Levels 13–16 add commander capes and crests; Levels 17–19 add legendary aura styling; Level 20 is the unique Hero with a crown and sparkles.
 - Each level has a distinct role name, color treatment, equipment progression, and floating identity card.
 - Walk to a soldier and use the `E` ProximityPrompt to select it, then select another soldier of the same level to merge. The server validates ownership, level, and inventory before changing state.
 - A successful merge removes both source models, creates the higher-level character, and emits a short lightweight particle burst at the merge location.

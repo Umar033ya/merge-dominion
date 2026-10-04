@@ -123,16 +123,26 @@ local function soldierPart(model, name, size, position, color, material, shape, 
     return item
 end
 
+local function meshSoldierPart(model, name, size, position, color, material, meshType, meshScale, rotation)
+    local item = soldierPart(model, name, size, position, color, material, Enum.PartType.Block, rotation)
+    local mesh = Instance.new("SpecialMesh")
+    mesh.Name = "Mesh"
+    mesh.MeshType = meshType
+    mesh.Scale = meshScale or Vector3.one
+    mesh.Parent = item
+    return item
+end
+
 local function addWeapon(model, level, base, stats)
     if level == 3 or (level >= 5 and level % 4 == 1) then
-        soldierPart(model, "SwordBlade", Vector3.new(0.22, 2.5, 0.45), base + Vector3.new(1.25, 0.15, -0.15), Color3.fromRGB(225, 235, 245), Enum.Material.Metal, Enum.PartType.Block, Vector3.new(0, 0, math.rad(-18)))
-        soldierPart(model, "SwordHilt", Vector3.new(1.1, 0.2, 0.25), base + Vector3.new(1.25, -1.05, -0.15), stats.AccentColor, Enum.Material.Metal)
+        meshSoldierPart(model, "SwordBlade", Vector3.new(0.22, 2.5, 0.45), base + Vector3.new(1.25, 0.15, -0.15), Color3.fromRGB(225, 235, 245), Enum.Material.Metal, Enum.MeshType.Wedge, Vector3.new(0.8, 1, 0.45), Vector3.new(0, 0, math.rad(-18)))
+        meshSoldierPart(model, "SwordHilt", Vector3.new(1.1, 0.2, 0.25), base + Vector3.new(1.25, -1.05, -0.15), stats.AccentColor, Enum.Material.Metal, Enum.MeshType.Cylinder, Vector3.new(1, 0.7, 1))
     elseif level == 4 or (level >= 6 and level % 4 == 2) then
-        soldierPart(model, "Bow", Vector3.new(0.2, 2.8, 0.2), base + Vector3.new(1.35, 0.2, -0.05), stats.AccentColor, Enum.Material.Wood, Enum.PartType.Block, Vector3.new(0, 0, math.rad(-20)))
-        soldierPart(model, "BowGrip", Vector3.new(0.12, 1.1, 0.12), base + Vector3.new(1.35, 0.2, -0.05), Color3.fromRGB(245, 235, 190), Enum.Material.Wood)
+        meshSoldierPart(model, "Bow", Vector3.new(0.2, 2.8, 0.2), base + Vector3.new(1.35, 0.2, -0.05), stats.AccentColor, Enum.Material.Wood, Enum.MeshType.Wedge, Vector3.new(0.65, 1, 0.65), Vector3.new(0, 0, math.rad(-20)))
+        meshSoldierPart(model, "BowGrip", Vector3.new(0.12, 1.1, 0.12), base + Vector3.new(1.35, 0.2, -0.05), Color3.fromRGB(245, 235, 190), Enum.Material.Wood, Enum.MeshType.Cylinder, Vector3.new(1, 0.7, 1))
     elseif level >= 8 then
-        soldierPart(model, "EnergyStaff", Vector3.new(0.25, 3.2, 0.25), base + Vector3.new(1.25, 0.4, 0), stats.AccentColor, Enum.Material.Metal)
-        soldierPart(model, "StaffCrystal", Vector3.new(0.65, 0.65, 0.65), base + Vector3.new(1.25, 2.05, 0), stats.AccentColor, Enum.Material.Neon, Enum.PartType.Ball)
+        meshSoldierPart(model, "EnergyStaff", Vector3.new(0.25, 3.2, 0.25), base + Vector3.new(1.25, 0.4, 0), stats.AccentColor, Enum.Material.Metal, Enum.MeshType.Cylinder, Vector3.new(0.8, 1, 0.8))
+        meshSoldierPart(model, "StaffCrystal", Vector3.new(0.65, 0.65, 0.65), base + Vector3.new(1.25, 2.05, 0), stats.AccentColor, Enum.Material.Neon, Enum.MeshType.Sphere, Vector3.new(1, 1, 1))
     end
 end
 
@@ -142,26 +152,26 @@ local function addSoldierVisual(player, level, ordinal)
     local stats = GameConfig.SoldierStats[level]; local model = Instance.new("Model"); model.Name = "Soldier_L" .. level; model:SetAttribute("OwnerUserId", player.UserId); model:SetAttribute("Level", level); model:SetAttribute("SoldierId", string.format("%d_%d_%d", player.UserId, level, ordinal)); model.Parent = folder
     local position = Vector3.new(-12 + (ordinal % 8) * 4, 0, 28 + math.floor(ordinal / 8) * 5)
     local base = position + Vector3.new(0, 0.6, 0)
-    local torso = soldierPart(model, "Torso", Vector3.new(1.65, 2.05, 1.05), base + Vector3.new(0, 2.2, 0), stats.Color, Enum.Material.SmoothPlastic)
-    soldierPart(model, "LeftLeg", Vector3.new(0.55, 1.45, 0.65), base + Vector3.new(-0.43, 0.65, 0), Color3.fromRGB(42, 57, 76), Enum.Material.SmoothPlastic)
-    soldierPart(model, "RightLeg", Vector3.new(0.55, 1.45, 0.65), base + Vector3.new(0.43, 0.65, 0), Color3.fromRGB(42, 57, 76), Enum.Material.SmoothPlastic)
-    soldierPart(model, "LeftBoot", Vector3.new(0.7, 0.35, 0.95), base + Vector3.new(-0.43, -0.2, -0.12), Color3.fromRGB(28, 34, 45), Enum.Material.SmoothPlastic)
-    soldierPart(model, "RightBoot", Vector3.new(0.7, 0.35, 0.95), base + Vector3.new(0.43, -0.2, -0.12), Color3.fromRGB(28, 34, 45), Enum.Material.SmoothPlastic)
+    local torso = meshSoldierPart(model, "Torso", Vector3.new(1.65, 2.05, 1.05), base + Vector3.new(0, 2.2, 0), stats.Color, Enum.Material.SmoothPlastic, Enum.MeshType.Torso, Vector3.new(1.05, 1.05, 1.05))
+    meshSoldierPart(model, "LeftLeg", Vector3.new(0.55, 1.45, 0.65), base + Vector3.new(-0.43, 0.65, 0), Color3.fromRGB(42, 57, 76), Enum.Material.SmoothPlastic, Enum.MeshType.Cylinder, Vector3.new(0.85, 1, 0.85))
+    meshSoldierPart(model, "RightLeg", Vector3.new(0.55, 1.45, 0.65), base + Vector3.new(0.43, 0.65, 0), Color3.fromRGB(42, 57, 76), Enum.Material.SmoothPlastic, Enum.MeshType.Cylinder, Vector3.new(0.85, 1, 0.85))
+    meshSoldierPart(model, "LeftBoot", Vector3.new(0.7, 0.35, 0.95), base + Vector3.new(-0.43, -0.2, -0.12), Color3.fromRGB(28, 34, 45), Enum.Material.SmoothPlastic, Enum.MeshType.Wedge, Vector3.new(1, 1, 1))
+    meshSoldierPart(model, "RightBoot", Vector3.new(0.7, 0.35, 0.95), base + Vector3.new(0.43, -0.2, -0.12), Color3.fromRGB(28, 34, 45), Enum.Material.SmoothPlastic, Enum.MeshType.Wedge, Vector3.new(1, 1, 1))
     for _, arm in ipairs({-1, 1}) do
-        soldierPart(model, arm == -1 and "LeftArm" or "RightArm", Vector3.new(0.5, 1.65, 0.58), base + Vector3.new(arm * 1.1, 2.2, 0), stats.Color, Enum.Material.SmoothPlastic, Enum.PartType.Block, Vector3.new(0, 0, math.rad(-arm * 8)))
-        soldierPart(model, arm == -1 and "LeftGlove" or "RightGlove", Vector3.new(0.55, 0.45, 0.65), base + Vector3.new(arm * 1.13, 1.25, -0.02), stats.AccentColor, Enum.Material.SmoothPlastic, Enum.PartType.Ball)
+        meshSoldierPart(model, arm == -1 and "LeftArm" or "RightArm", Vector3.new(0.5, 1.65, 0.58), base + Vector3.new(arm * 1.1, 2.2, 0), stats.Color, Enum.Material.SmoothPlastic, Enum.MeshType.Cylinder, Vector3.new(0.85, 1, 0.85), Vector3.new(0, 0, math.rad(-arm * 8)))
+        meshSoldierPart(model, arm == -1 and "LeftGlove" or "RightGlove", Vector3.new(0.55, 0.45, 0.65), base + Vector3.new(arm * 1.13, 1.25, -0.02), stats.AccentColor, Enum.Material.SmoothPlastic, Enum.MeshType.Sphere, Vector3.new(1, 0.8, 1))
     end
-    local head = soldierPart(model, "Head", Vector3.new(1.45, 1.45, 1.35), base + Vector3.new(0, 4.05, 0), Color3.fromRGB(255, 205, 164), Enum.Material.SmoothPlastic, Enum.PartType.Ball)
-    soldierPart(model, "Helmet", Vector3.new(1.65, 0.62, 1.5), base + Vector3.new(0, 4.72, 0), stats.AccentColor, Enum.Material.Metal, Enum.PartType.Ball)
+    local head = meshSoldierPart(model, "Head", Vector3.new(1.45, 1.45, 1.35), base + Vector3.new(0, 4.05, 0), Color3.fromRGB(255, 205, 164), Enum.Material.SmoothPlastic, Enum.MeshType.Head, Vector3.new(1.05, 1.05, 1.05))
+    meshSoldierPart(model, "Helmet", Vector3.new(1.65, 0.62, 1.5), base + Vector3.new(0, 4.72, 0), stats.AccentColor, Enum.Material.Metal, Enum.MeshType.Sphere, Vector3.new(1.1, 0.55, 1.05))
     soldierPart(model, "HelmetBrim", Vector3.new(1.8, 0.16, 0.7), base + Vector3.new(0, 4.48, -0.42), stats.AccentColor, Enum.Material.Metal)
     soldierPart(model, "Visor", Vector3.new(1.05, 0.22, 0.12), base + Vector3.new(0, 4.08, -0.66), Color3.fromRGB(31, 42, 55), Enum.Material.Glass)
-    for _, x in ipairs({-0.25, 0.25}) do soldierPart(model, "Eye", Vector3.new(0.16, 0.16, 0.08), base + Vector3.new(x, 4.15, -0.7), Color3.fromRGB(31, 42, 55), Enum.Material.SmoothPlastic, Enum.PartType.Ball) end
+    for _, x in ipairs({-0.25, 0.25}) do meshSoldierPart(model, "Eye", Vector3.new(0.16, 0.16, 0.08), base + Vector3.new(x, 4.15, -0.7), Color3.fromRGB(31, 42, 55), Enum.Material.SmoothPlastic, Enum.MeshType.Sphere, Vector3.new(1, 1, 0.5)) end
     soldierPart(model, "UtilityBelt", Vector3.new(1.75, 0.28, 1.12), base + Vector3.new(0, 1.45, 0), stats.AccentColor, Enum.Material.Metal)
     if level >= 2 then soldierPart(model, "TacticalVest", Vector3.new(1.25, 1.1, 1.16), base + Vector3.new(0, 2.35, -0.58), stats.AccentColor, Enum.Material.Metal) end
     if level >= 5 then
-        for _, x in ipairs({-0.82, 0.82}) do soldierPart(model, "ShoulderArmor", Vector3.new(0.7, 0.38, 0.78), base + Vector3.new(x, 3.05, 0), stats.AccentColor, Enum.Material.Metal, Enum.PartType.Ball) end
+        for _, x in ipairs({-0.82, 0.82}) do meshSoldierPart(model, "ShoulderArmor", Vector3.new(0.7, 0.38, 0.78), base + Vector3.new(x, 3.05, 0), stats.AccentColor, Enum.Material.Metal, Enum.MeshType.Sphere, Vector3.new(1, 0.7, 1)) end
     end
-    if level >= 9 then soldierPart(model, "ChestEmblem", Vector3.new(0.42, 0.42, 0.12), base + Vector3.new(0, 2.7, -0.67), stats.AccentColor, Enum.Material.Neon, Enum.PartType.Ball) end
+    if level >= 9 then meshSoldierPart(model, "ChestEmblem", Vector3.new(0.42, 0.42, 0.12), base + Vector3.new(0, 2.7, -0.67), stats.AccentColor, Enum.Material.Neon, Enum.MeshType.Sphere, Vector3.new(1, 1, 0.5)) end
     if level >= 10 then soldierPart(model, "TacticalPack", Vector3.new(1.2, 1.25, 0.38), base + Vector3.new(0, 2.25, 0.62), stats.Color, Enum.Material.Metal) end
     if level >= 11 then soldierPart(model, "EliteVisor", Vector3.new(1.25, 0.18, 0.14), base + Vector3.new(0, 4.22, -0.7), stats.AccentColor, Enum.Material.Neon) end
     if level == 12 then soldierPart(model, "EliteBanner", Vector3.new(0.16, 1.7, 0.16), base + Vector3.new(-1.3, 2.55, 0), stats.AccentColor, Enum.Material.Metal) end
@@ -169,9 +179,9 @@ local function addSoldierVisual(player, level, ordinal)
         soldierPart(model, "CommanderCrest", Vector3.new(0.25, 1.05, 0.25), base + Vector3.new(0, 5.25, 0), stats.AccentColor, Enum.Material.Neon)
         soldierPart(model, "CommanderCape", Vector3.new(1.55, 1.9, 0.18), base + Vector3.new(0, 2.15, 0.65), stats.Color, Enum.Material.Fabric)
     end
-    if level >= 17 then soldierPart(model, "LegendaryAura", Vector3.new(2.5, 0.16, 2.5), base + Vector3.new(0, 5.35, 0), stats.AccentColor, Enum.Material.Neon, Enum.PartType.Cylinder) end
+    if level >= 17 then meshSoldierPart(model, "LegendaryAura", Vector3.new(2.5, 0.16, 2.5), base + Vector3.new(0, 5.35, 0), stats.AccentColor, Enum.Material.Neon, Enum.MeshType.Cylinder, Vector3.new(1, 0.35, 1)) end
     if level == 20 then
-        soldierPart(model, "LegendaryCrown", Vector3.new(1.25, 0.35, 1.25), base + Vector3.new(0, 5.55, 0), stats.AccentColor, Enum.Material.Neon, Enum.PartType.Cylinder)
+        meshSoldierPart(model, "LegendaryCrown", Vector3.new(1.25, 0.35, 1.25), base + Vector3.new(0, 5.55, 0), stats.AccentColor, Enum.Material.Neon, Enum.MeshType.Cylinder, Vector3.new(1, 0.6, 1))
         local effect = Instance.new("ParticleEmitter"); effect.Name, effect.Color, effect.Rate, effect.Lifetime, effect.Speed, effect.Parent = "LegendarySparkles", ColorSequence.new(stats.AccentColor), 8, NumberRange.new(0.5, 1), NumberRange.new(1, 2), torso
     end
     addWeapon(model, level, base, stats)
