@@ -19,8 +19,8 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 2. From this repository, run `rojo serve default.project.json`.
 3. In Roblox Studio, connect the Rojo plugin to the served project and sync it.
 4. To produce a local place file instead, run `rojo build default.project.json -o MergeDominion.rbxlx`, then open the newly generated `MergeDominion.rbxlx` in Roblox Studio.
-5. Press **Play**. The server creates the entire arena and the client creates the HUD; no manual map or UI construction is required. The generated place will not show the runtime-built arena while it is only in Edit mode.
-6. In Play mode, the server Explorer should contain `Workspace > MergeDominionWorld`, including `ArenaGround`, `MainBase`, `SoldierYard`, `Checkpoints`, and the three enemy-base models.
+5. Press **Play**. The server builds and validates the entire arena before it connects player initialization; the client creates the HUD. The generated place will not show the runtime-built arena while it is only in Edit mode.
+6. In Play mode, the server Explorer should contain `Workspace > MergeDominionWorld`, including `ArenaGround`, `MainBase`, `SoldierYard`, `Checkpoints`, `PlayerSpawn`, and all five city models. The `PlayerSpawn` is a collidable pad on the Main Base foundation, not a floating or non-collidable marker.
 7. Publish the place under your Roblox account before testing persistence. In **Game Settings → Security**, enable **Enable Studio Access to API Services** for DataStore testing.
 
 ## MVP behavior
@@ -65,7 +65,9 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players recruit Level 1 s
 
 ## Rojo build versus Play mode
 
-`default.project.json` intentionally maps source scripts and modules into `ReplicatedStorage`, `ServerScriptService`, and `StarterPlayer`; it does not map a static `Workspace` model. `WorldBuilder.lua` is required by `Server.server.lua` and runs `WorldBuilder.build()` when the server starts. Therefore `rojo build` creates a place containing the code, while the visible map is created at runtime after pressing **Play**. There are no duplicate or legacy world generators in this repository.
+`default.project.json` intentionally maps source scripts and modules into `ReplicatedStorage`, `ServerScriptService`, and `StarterPlayer`; it does not map a static `Workspace` model. `Server.server.lua` loads and runs `WorldBuilder.build()` before loading persistence or connecting player initialization. The builder creates the ground first, then the Main Base/Soldier Yard, cities and prompts, checkpoints, and finally the grounded `PlayerSpawn`; it validates every required object and retries once with a traceback if construction fails. Therefore `rojo build` creates a place containing the code, while the visible map is created at runtime after pressing **Play**.
+
+If the world still does not appear, open **View → Output** immediately after pressing Play. Startup failures now use the `[MergeDominion]` prefix and report the failed world-build attempt or missing required object instead of failing silently.
 
 ## Studio DataStore behavior
 

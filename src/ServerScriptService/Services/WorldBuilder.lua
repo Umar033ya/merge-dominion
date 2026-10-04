@@ -77,8 +77,15 @@ local function cityZone(world, index, city)
 end
 
 function WorldBuilder.build()
-    local old = workspace:FindFirstChild("MergeDominionWorld"); if old then old:Destroy() end
+    local existing = workspace:FindFirstChild("MergeDominionWorld")
+    if existing and existing:GetAttribute("WorldReady") == true and existing:FindFirstChild("ArenaGround") and existing:FindFirstChild("MainBase") and existing:FindFirstChild("SoldierYard") and existing:FindFirstChild("PlayerSpawn") then
+        warn("[MergeDominion] WorldBuilder found an existing ready MergeDominionWorld; reusing it.")
+        return existing
+    end
+    if existing then existing:Destroy() end
     local world = Instance.new("Folder"); world.Name, world.Parent = "MergeDominionWorld", workspace
+    world:SetAttribute("WorldReady", false)
+    world:SetAttribute("BuildVersion", "city-level20-v1")
     part(world, "ArenaGround", Vector3.new(280, 2, 230), Vector3.new(0, -1, 0), COLORS.Ground, Enum.Material.Grass); part(world, "ArenaInset", Vector3.new(262, 0.05, 212), Vector3.new(0, 0.025, 0), COLORS.GroundAccent, Enum.Material.Ground)
     road(world, "MainRoad", Vector3.new(12, 1, 150), Vector3.new(0, -0.2, -18)); road(world, "EastRoad", Vector3.new(100, 1, 10), Vector3.new(52, -0.18, -25)); road(world, "WestRoad", Vector3.new(100, 1, 10), Vector3.new(-52, -0.16, 35)); road(world, "SouthRoad", Vector3.new(12, 1, 100), Vector3.new(52, -0.2, 35)); road(world, "NorthRoad", Vector3.new(12, 1, 100), Vector3.new(-52, -0.2, -35))
     mainBase(world)
@@ -87,7 +94,18 @@ function WorldBuilder.build()
     checkpoint(checkpointFolder, "MainBaseCheckpoint", "Main Base", Vector3.new(0, 0, 18)); checkpoint(checkpointFolder, "EmberCheckpoint", "Ember Outpost", Vector3.new(0, 0, -88)); checkpoint(checkpointFolder, "StonewatchCheckpoint", "Stonewatch", Vector3.new(83, 0, -25)); checkpoint(checkpointFolder, "FrostkeepCheckpoint", "Frostkeep", Vector3.new(-83, 0, 35))
     for _, item in ipairs({{Vector3.new(-58, 0, 78), 1.2}, {Vector3.new(58, 0, 78), 1}, {Vector3.new(-72, 0, -70), 1.1}, {Vector3.new(72, 0, -70), 1.3}}) do tree(world, item[1], item[2]) end
     for _, position in ipairs({Vector3.new(-38, 0, -22), Vector3.new(42, 0, 70), Vector3.new(-48, 0, 56), Vector3.new(46, 0, -64)}) do rock(world, position, Vector3.new(4, 3, 3)) end
-    local spawn = Instance.new("SpawnLocation"); spawn.Name, spawn.Size, spawn.Position, spawn.Anchored, spawn.Neutral, spawn.Transparency, spawn.CanCollide, spawn.Parent = "PlayerSpawn", Vector3.new(8, 1, 8), Vector3.new(0, 13, 61), true, true, 1, false, world
+    local spawn = Instance.new("SpawnLocation")
+    spawn.Name = "PlayerSpawn"
+    spawn.Size = Vector3.new(8, 1, 8)
+    spawn.Position = Vector3.new(0, 1, 38)
+    spawn.Anchored = true
+    spawn.Neutral = true
+    spawn.AllowTeamChangeOnTouch = false
+    spawn.Duration = 0
+    spawn.Transparency = 0.2
+    spawn.CanCollide = true
+    spawn.Parent = world
+    world:SetAttribute("WorldReady", true)
     return world
 end
 

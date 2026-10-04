@@ -9,9 +9,52 @@ local resultEvent = Instance.new("RemoteEvent"); resultEvent.Name = "BattleResul
 local sprintEvent = Instance.new("RemoteEvent"); sprintEvent.Name = "Sprint"; sprintEvent.Parent = remotes
 
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
+local worldBuilderOk, WorldBuilder = pcall(require, script.Parent.Services.WorldBuilder)
+if not worldBuilderOk then
+    warn("[MergeDominion] WorldBuilder module failed to load; no player spawn will be allowed: " .. tostring(WorldBuilder))
+    error(WorldBuilder, 0)
+end
+
+local function buildWorldOrFail()
+    local lastError
+    for attempt = 1, 2 do
+        local ok, result = xpcall(WorldBuilder.build, debug.traceback)
+        if ok and result and result:GetAttribute("WorldReady") == true then
+            local required = {"ArenaGround", "MainBase", "SoldierYard", "Checkpoints", "PlayerSpawn"}
+            for _, name in ipairs(required) do
+                if not result:FindFirstChild(name) then
+                    ok = false
+                    result = "missing required world object: " .. name
+                    break
+                end
+            end
+            if ok then
+                for _, city in ipairs(GameConfig.EnemyCities) do
+                    local model = result:FindFirstChild(city.Id)
+                    if not model or not model:FindFirstChild("AttackPrompt", true) then
+                        ok = false
+                        result = "missing city or attack prompt: " .. city.Id
+                        break
+                    end
+                end
+            end
+        end
+        if ok then
+            print("[MergeDominion] World ready before player initialization: " .. result:GetFullName())
+            return result
+        end
+        lastError = result
+        warn("[MergeDominion] World build attempt " .. attempt .. " failed: " .. tostring(result))
+        task.wait()
+    end
+    error("[MergeDominion] WorldBuilder failed after retries: " .. tostring(lastError), 0)
+end
+
+-- Build and validate the physical world before loading persistence or connecting players.
+local world = buildWorldOrFail()
+
 local DataService = require(script.Parent.Services.DataService)
 local CombatService = require(script.Parent.Services.CombatService)
-local WorldBuilder = require(script.Parent.Services.WorldBuilder)
 
 local generationTimers, mergeSelections, sprintStates, cityCooldowns = {}, {}, {}, {}
 local handleSoldierPrompt
@@ -180,7 +223,6 @@ RunService.Heartbeat:Connect(function(deltaTime)
     for player, sprint in pairs(sprintStates) do local character = player.Character; local humanoid = character and character:FindFirstChildOfClass("Humanoid"); if humanoid then if sprint.Requested and os.clock() - sprint.LastSignal > 0.6 then sprint.Requested = false end; local target = sprint.Requested and GameConfig.SprintWalkSpeed or GameConfig.DefaultWalkSpeed; humanoid.WalkSpeed += (target - humanoid.WalkSpeed) * math.min(1, deltaTime * 12) end end
 end)
 
-local world = WorldBuilder.build()
 for _, city in ipairs(GameConfig.EnemyCities) do local model = world:FindFirstChild(city.Id); local prompt = model and model:FindFirstChild("AttackPrompt", true); if prompt then prompt.Triggered:Connect(function(player) attackCity(player, city) end) end end
 local function initializePlayer(player)
     DataService.load(player); local state = DataService.get(player); if state then generationTimers[player] = generationInterval(state); syncSoldierVisuals(player, state); task.defer(function() sendState(player) end); task.spawn(runGeneration, player); task.spawn(runCityIncome, player) end
