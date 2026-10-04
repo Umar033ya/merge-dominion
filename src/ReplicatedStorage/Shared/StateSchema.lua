@@ -3,9 +3,11 @@ local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local StateSchema = {}
 
 function StateSchema.new()
+    local soldiers = {}
+    for level = 1, GameConfig.MaxSoldierLevel do soldiers[level] = 0 end
     return {
         Currency = GameConfig.StartingCurrency,
-        Soldiers = {[1] = 0, [2] = 0, [3] = 0},
+        Soldiers = soldiers,
         Conquered = {},
         GenerationLevel = 1,
     }
@@ -17,9 +19,7 @@ function StateSchema.sanitize(raw)
 
     state.Currency = math.max(0, math.floor(tonumber(raw.Currency) or state.Currency))
     local generationLevel = math.floor(tonumber(raw.GenerationLevel) or 1)
-    if generationLevel < 1 then generationLevel = 1 end
-    if generationLevel > #GameConfig.GenerationIntervals then generationLevel = #GameConfig.GenerationIntervals end
-    state.GenerationLevel = generationLevel
+    state.GenerationLevel = math.clamp(generationLevel, 1, #GameConfig.GenerationIntervals)
 
     local remainingCapacity = GameConfig.MaxSoldiers
     if type(raw.Soldiers) == "table" then

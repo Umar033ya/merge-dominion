@@ -4,21 +4,33 @@ local CombatService = {}
 
 local function armyPower(state)
     local power = 0
-    for level, count in pairs(state.Soldiers) do power += (GameConfig.SoldierStats[level].Attack * count) end
+    for level, count in pairs(state.Soldiers) do
+        local stats = GameConfig.SoldierStats[level]
+        if stats then power += stats.Attack * count end
+    end
     return power
 end
-local function enemyPower(enemy)
+
+local function enemyPower(city)
     local power = 0
-    for _, group in ipairs(enemy.Defenders) do power += GameConfig.SoldierStats[group.Level].Attack * group.Count end
+    for _, group in ipairs(city.Defenders) do
+        local stats = GameConfig.SoldierStats[group.Level]
+        if stats then power += stats.Attack * group.Count end
+    end
     return power
 end
-function CombatService.resolve(state, enemy)
-    local playerPower, targetPower = armyPower(state), enemyPower(enemy)
+
+function CombatService.resolve(state, city)
+    local playerPower = armyPower(state)
+    local targetPower = enemyPower(city)
+    local won = playerPower >= targetPower and playerPower > 0
     return {
-        Won = playerPower >= targetPower and playerPower > 0,
+        Won = won,
         PlayerPower = playerPower,
         EnemyPower = targetPower,
-        Reward = enemy.Reward,
+        Reward = city.Reward,
+        Defenders = city.Defenders,
     }
 end
+
 return CombatService
