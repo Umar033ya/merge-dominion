@@ -4,8 +4,8 @@ local ContextActionService = game:GetService("ContextActionService")
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local action, stateEvent, resultEvent, sprintEvent = remotes.Action, remotes.State, remotes.BattleResult, remotes.Sprint
-local cities = {{Id = "EmberOutpost", Name = "Ember Outpost", Defenders = "Easy • +30/min", Color = Color3.fromRGB(207, 79, 67)}, {Id = "Stonewatch", Name = "Stonewatch", Defenders = "Medium • +50/min", Color = Color3.fromRGB(220, 122, 67)}, {Id = "Frostkeep", Name = "Frostkeep", Defenders = "Hard • +75/min", Color = Color3.fromRGB(126, 130, 219)}, {Id = "Sunspire", Name = "Sunspire", Defenders = "Difficult • +100/min", Color = Color3.fromRGB(242, 190, 76)}, {Id = "NightfallCitadel", Name = "Nightfall Citadel", Defenders = "Very difficult • +150/min", Color = Color3.fromRGB(161, 114, 220)}}
-local state = {Currency = 0, Soldiers = {}, Conquered = {}, Cities = {}, GenerationInterval = 60, GenerationRemaining = 60, NextUpgradeCost = 50, SoldierCount = 0, MaxSoldiers = 20, HighestLevel = 0, TotalIncomePerMinute = 0}
+local cities = {{Id = "EmberOutpost", Name = "Ember Outpost", Defenders = "Early • +25/min"}, {Id = "Stonewatch", Name = "Stonewatch", Defenders = "Early • +40/min"}, {Id = "Frostkeep", Name = "Frostkeep", Defenders = "Early • +55/min"}, {Id = "Sunspire", Name = "Sunspire", Defenders = "Middle • +70/min"}, {Id = "NightfallCitadel", Name = "Nightfall Citadel", Defenders = "Middle • +85/min"}, {Id = "Ironvale", Name = "Ironvale", Defenders = "Middle • +105/min"}, {Id = "Moonharbor", Name = "Moonharbor", Defenders = "Middle • +125/min"}, {Id = "Cindercrest", Name = "Cindercrest", Defenders = "Late • +150/min"}, {Id = "VerdantReach", Name = "Verdant Reach", Defenders = "Late • +180/min"}, {Id = "Dragonspire", Name = "Dragonspire", Defenders = "Late • +230/min"}}
+local state = {Currency = 0, Soldiers = {}, Conquered = {}, Cities = {}, GenerationInterval = 60, GenerationRemaining = 60, NextUpgradeCost = 50, SoldierCount = 0, MaxSoldiers = 20, HighestLevel = 0, TotalIncomePerMinute = 0, ArmyLocation = "MainBase", ArmyStatus = "Idle"}
 for level = 1, 20 do state.Soldiers[level] = 0 end
 
 local gui = Instance.new("ScreenGui"); gui.Name, gui.ResetOnSpawn, gui.Parent = "MergeDominionUI", false, player:WaitForChild("PlayerGui")
@@ -15,7 +15,7 @@ local function button(parent, value, size, position, color) local b = Instance.n
 local function formatTime(seconds) seconds = math.max(0, math.floor(tonumber(seconds) or 0)); return string.format("%02d:%02d", math.floor(seconds / 60), seconds % 60) end
 
 local menuButton = button(gui, "MENU", UDim2.fromOffset(112, 42), UDim2.fromOffset(24, 24), Color3.fromRGB(43, 143, 207))
-local root = panel(gui, UDim2.fromOffset(450, 690), UDim2.fromOffset(24, 76), Color3.fromRGB(17, 25, 36)); root.Visible = false
+local root = panel(gui, UDim2.fromOffset(450, 900), UDim2.fromOffset(24, 76), Color3.fromRGB(17, 25, 36)); root.Visible = false
 local menuOpen = false
 local function setMenuOpen(open) menuOpen = open; root.Visible = open; menuButton.Text = open and "CLOSE MENU" or "MENU" end
 menuButton.MouseButton1Click:Connect(function() setMenuOpen(not menuOpen) end)
@@ -33,8 +33,8 @@ for i, city in ipairs(cities) do
     local status = text(row, city.Defenders, UDim2.fromOffset(370, 19), UDim2.fromOffset(12, 28), Enum.Font.Gotham, Color3.fromRGB(180, 194, 210)); status.TextSize = 12
     cityRows[city.Id] = status
 end
-local income = text(root, "", UDim2.fromOffset(410, 40), UDim2.fromOffset(20, 596), Enum.Font.GothamBold, Color3.fromRGB(112, 238, 163)); income.TextSize = 14
-local result = text(root, "Explore the roads to find the city attack prompts.", UDim2.fromOffset(410, 42), UDim2.fromOffset(20, 638), Enum.Font.GothamBold, Color3.fromRGB(255, 213, 104)); result.TextSize = 13; result.TextWrapped = true
+local income = text(root, "", UDim2.fromOffset(410, 40), UDim2.fromOffset(20, 875), Enum.Font.GothamBold, Color3.fromRGB(112, 238, 163)); income.TextSize = 14
+local result = text(root, "Explore the roads to find the city attack prompts.", UDim2.fromOffset(410, 42), UDim2.fromOffset(20, 820), Enum.Font.GothamBold, Color3.fromRGB(255, 213, 104)); result.TextSize = 13; result.TextWrapped = true
 
 local function inventorySummary()
     local parts = {}
@@ -44,9 +44,9 @@ end
 local function render()
     currency.Text = "COINS  " .. state.Currency
     generation.Text = string.format("GENERATION %ds • NEXT %s\nCAPACITY %d / %d", state.GenerationInterval, state.SoldierCount >= state.MaxSoldiers and "FULL" or formatTime(state.GenerationRemaining), state.SoldierCount, state.MaxSoldiers)
-    army.Text = "ARMY  " .. inventorySummary() .. "\nHIGHEST LEVEL  " .. (state.HighestLevel or 0) .. "  •  TOTAL  " .. state.SoldierCount
+    army.Text = "ARMY  " .. inventorySummary() .. "\nHIGHEST LEVEL  " .. (state.HighestLevel or 0) .. "  •  TOTAL  " .. state.SoldierCount .. "\n" .. string.upper(state.ArmyStatus or "IDLE") .. " FROM " .. (state.ArmyLocation or "MainBase")
     if state.NextUpgradeCost then upgrade.Text = "UPGRADE SPEED • " .. state.NextUpgradeCost .. " COINS"; upgrade.Active = state.Currency >= state.NextUpgradeCost; upgrade.AutoButtonColor = upgrade.Active; upgrade.BackgroundColor3 = upgrade.Active and Color3.fromRGB(55, 145, 105) or Color3.fromRGB(68, 82, 86) else upgrade.Text = "GENERATION SPEED MAXED"; upgrade.Active = false; upgrade.AutoButtonColor = false; upgrade.BackgroundColor3 = Color3.fromRGB(68, 82, 86) end
-    for _, city in ipairs(cities) do local cityState = state.Cities[city.Id] or {}; cityRows[city.Id].Text = cityState.Conquered and "CONQUERED • +" .. cityState.IncomePerMinute .. "/min secured" or city.Defenders .. " • " .. (cityState.Defenders or "enemy army") end
+    for _, city in ipairs(cities) do local cityState = state.Cities[city.Id] or {}; cityRows[city.Id].Text = cityState.Conquered and ((cityState.Stationed and "STATIONED " .. (cityState.StationedCount or 0) .. " • " or "CONQUERED • ") .. "+" .. cityState.IncomePerMinute .. "/min secured") or city.Defenders .. " • " .. (cityState.Defenders or "visible enemy army") end
     income.Text = "PASSIVE CITY INCOME  +" .. (state.TotalIncomePerMinute or 0) .. " COINS / MINUTE"
 end
 

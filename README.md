@@ -1,6 +1,6 @@
 # Merge Dominion
 
-Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 soldiers, merge matching soldiers through Level 20, and physically travel to five progressively stronger enemy cities. The Main Base is always safe.
+Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 soldiers, merge matching soldiers through Level 20, and physically travel from the Main Base or a stationed controlled city toward ten progressively stronger enemy cities. The Main Base is always safe.
 
 ## Project structure
 
@@ -9,7 +9,7 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 - `src/ReplicatedStorage/Shared/StateSchema.lua` — progression defaults and save-data sanitization.
 - `src/ServerScriptService/Services/DataService.lua` — DataStore load/save lifecycle with an in-memory Studio fallback.
 - `src/ServerScriptService/Services/CombatService.lua` — deterministic power comparison combat.
-- `src/ServerScriptService/Services/WorldBuilder.lua` — runtime-generated arena, polished safe Main Base, Soldier Yard, roads, decorations, and enemy cities.
+- `src/ServerScriptService/Services/WorldBuilder.lua` — runtime-generated large arena, safe Main Base, Soldier Yard, road network, checkpoints, decorations, ten enemy cities, and visible defender models.
 - `src/ServerScriptService/Server.server.lua` — remotes, player actions, generated soldier characters, merging, rewards, and passive income.
 - `src/StarterPlayer/StarterPlayerScripts/Client.client.lua` — generated HUD and interaction controls.
 
@@ -20,7 +20,7 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 3. In Roblox Studio, connect the Rojo plugin to the served project and sync it.
 4. To produce a local place file instead, run `rojo build default.project.json -o MergeDominion.rbxlx`, then open the newly generated `MergeDominion.rbxlx` in Roblox Studio.
 5. Press **Play**. The server builds and validates the entire arena before it connects player initialization; the client creates the HUD. The generated place will not show the runtime-built arena while it is only in Edit mode.
-6. In Play mode, the server Explorer should contain `Workspace > MergeDominionWorld`, including `ArenaGround`, `MainBase`, `SoldierYard`, `Checkpoints`, `PlayerSpawn`, and all five city models. The `PlayerSpawn` is a collidable pad on the Main Base foundation, not a floating or non-collidable marker.
+6. In Play mode, the server Explorer should contain `Workspace > MergeDominionWorld`, including `ArenaGround`, `MainBase`, `SoldierYard`, `Checkpoints`, `PlayerSpawn`, and all ten city models. The `PlayerSpawn` is a collidable pad on the Main Base foundation, not a floating or non-collidable marker.
 7. Publish the place under your Roblox account before testing persistence. In **Game Settings → Security**, enable **Enable Studio Access to API Services** for DataStore testing.
 
 ## MVP behavior
@@ -35,7 +35,7 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 
 - The permanent Main Base is a distinct blue house with a spawn point, entrance, flag, and safe label.
 - The Soldier Yard sits directly in front of the Main Base; generated soldier models appear there.
-- A compact road network connects the Main Base to the five city approaches.
+- A larger road network connects the Main Base to ten separated city territories across the map.
 - Cities use progressively stronger visual defenses: multiple buildings, towers, city flags, signs, and themed colors.
 - Trees, rocks, ground accents, and road borders provide visual separation without creating a large map.
 - A solid ground floor keeps buildings, roads, Soldier Yard objects, and decorations grounded.
@@ -43,11 +43,21 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 
 ## City conquest
 
-- The three legacy enemy bases are now the first three city zones, with two additional cities: Sunspire and Nightfall Citadel.
-- Each city is a small group of buildings with a city sign, flag, gate, defender composition, increasing difficulty, and a physical `E — Attack City` prompt.
+- The world contains ten staged city zones: Ember Outpost, Stonewatch, Frostkeep, Sunspire, Nightfall Citadel, Ironvale, Moonharbor, Cindercrest, Verdant Reach, and Dragonspire.
+- Each city is a distinct group of buildings with walls, gate, city sign, flag, configured defender composition, visible enemy soldier models, increasing difficulty, income, and a physical `E — Attack City` prompt.
 - City victories are calculated by the server from the player's current Level 1–20 army and the configured defender army. A short server cooldown prevents attack spam.
-- A defeat does not damage or conquer the permanent Main Base. It removes a temporary fraction of the player's soldiers and reports the player/enemy power comparison.
+- Pressing an attack prompt starts a server-controlled `Traveling` sequence. The existing player soldier models move together along the direct road route to the target city, then enter a short `Battling` presentation with highlighted/pulsing player and enemy models before the existing power calculation resolves.
+- A defeat does not damage or conquer the permanent Main Base. It removes a temporary fraction of the player's soldiers, leaves surviving models stationed at the battle city, and reports the player/enemy power comparison.
 - Conquered cities are stored in the existing `Conquered` state table and pay their configured income once per minute per player. The MENU shows each city's income and the total passive income per minute.
+- A victory removes the visible enemy defenders, changes the city flag and gate to player colors, sets the city as a controlled base, and leaves the surviving player army stationed there instead of returning it to Main Base.
+- The MENU reports the stationed soldier count, controlled-city income, and total passive income.
+
+## Army travel and controlled-base network
+
+- The existing soldier inventory remains the only authoritative army; no duplicate inventory or NPC system was added.
+- Persisted state now includes `ArmyLocation` and `ArmyStatus`. Valid statuses are `Idle`, `Traveling`, `Battling`, and `Stationed`; legacy saves default safely to `MainBase` and `Idle`.
+- New attacks launch from the current army location. After a victory, the next attack can begin from the newly conquered city. After a defeat, surviving soldiers remain at the battle location and the position is retained for the next session.
+- Generation and merging remain server-authoritative. During travel/battle, visual resynchronization waits until the sequence completes so the marching army is not teleported back by a timer tick.
 
 ## Automatic soldier progression
 
@@ -82,4 +92,5 @@ If the world still does not appear, open **View → Output** immediately after p
 - DataStore persistence requires a published experience and Studio API Services enabled; otherwise the game falls back to a fresh in-memory session and logs the save/load warning.
 - Static validation covers project mapping, required files, remote direction, state ownership, and Luau source review; actual Roblox API execution, Rojo synchronization, UI rendering, and DataStore behavior still require Roblox Studio.
 - This repository does not include a binary `.rbxlx` place file; the Rojo project is the source of truth and generates all runtime Instances. Roblox Studio testing requires the Rojo plugin/CLI connection.
+- Studio testing should verify the ten city models and visible `Defenders` folders, watch the soldier folder travel from Main Base or the current stationed city, observe the battle sequence, and confirm victory/defeat leaves the army at the destination.
 - The MVP intentionally omits PvP, trading, pets, complex animations, monetization, and large-scale troop simulation.

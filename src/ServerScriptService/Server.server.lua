@@ -32,9 +32,9 @@ local function buildWorldOrFail()
             if ok then
                 for _, city in ipairs(GameConfig.EnemyCities) do
                     local model = result:FindFirstChild(city.Id)
-                    if not model or not model:FindFirstChild("AttackPrompt", true) then
+                    if not model or not model:FindFirstChild("AttackPrompt", true) or not model:FindFirstChild("Defenders") or #model.Defenders:GetChildren() == 0 then
                         ok = false
-                        result = "missing city or attack prompt: " .. city.Id
+                        result = "missing city, attack prompt, or visible defenders: " .. city.Id
                         break
                     end
                 end
@@ -83,14 +83,14 @@ local function defenderSummary(city)
 end
 local function citySummary(state)
     local summary = {}
-    for _, city in ipairs(GameConfig.EnemyCities) do summary[city.Id] = {Name = city.Name, Defenders = defenderSummary(city), IncomePerMinute = city.IncomePerMinute, Conquered = state.Conquered[city.Id] == true} end
+    for _, city in ipairs(GameConfig.EnemyCities) do summary[city.Id] = {Name = city.Name, Defenders = defenderSummary(city), IncomePerMinute = city.IncomePerMinute, Conquered = state.Conquered[city.Id] == true, Stationed = state.ArmyLocation == city.Id, StationedCount = state.ArmyLocation == city.Id and totalSoldiers(state) or 0} end
     return summary
 end
 local function snapshot(player, state)
     local soldiers = {}
     for level = 1, GameConfig.MaxSoldierLevel do soldiers[level] = state.Soldiers[level] end
     local interval = generationInterval(state)
-    return {Currency = state.Currency, Soldiers = soldiers, Conquered = state.Conquered, Cities = citySummary(state), TotalIncomePerMinute = totalCityIncome(state), HighestLevel = highestLevel(state), GenerationLevel = state.GenerationLevel, GenerationInterval = interval, GenerationRemaining = math.max(0, math.ceil(generationTimers[player] or interval)), NextUpgradeCost = nextUpgradeCost(state), SoldierCount = totalSoldiers(state), MaxSoldiers = GameConfig.MaxSoldiers}
+    return {Currency = state.Currency, Soldiers = soldiers, Conquered = state.Conquered, Cities = citySummary(state), TotalIncomePerMinute = totalCityIncome(state), HighestLevel = highestLevel(state), GenerationLevel = state.GenerationLevel, GenerationInterval = interval, GenerationRemaining = math.max(0, math.ceil(generationTimers[player] or interval)), NextUpgradeCost = nextUpgradeCost(state), SoldierCount = totalSoldiers(state), MaxSoldiers = GameConfig.MaxSoldiers, ArmyLocation = state.ArmyLocation, ArmyStatus = state.ArmyStatus}
 end
 local function sendState(player)
     local state = DataService.get(player); if state then stateEvent:FireClient(player, snapshot(player, state)) end
@@ -112,6 +112,12 @@ end
 local function isOwnedSoldier(player, model)
     local folder = soldierFolder(player)
     return model and model:IsA("Model") and folder and model.Parent == folder and model:GetAttribute("OwnerUserId") == player.UserId and typeof(model:GetAttribute("Level")) == "number"
+end
+
+local function armyPosition(location)
+    if location == "MainBase" then return GameConfig.SoldierYardPosition end
+    for _, city in ipairs(GameConfig.EnemyCities) do if city.Id == location then return city.Position end end
+    return GameConfig.SoldierYardPosition
 end
 
 local function soldierPart(model, name, size, position, color, material, shape, rotation)
@@ -146,11 +152,12 @@ local function addWeapon(model, level, base, stats)
     end
 end
 
-local function addSoldierVisual(player, level, ordinal)
+local function addSoldierVisual(player, level, ordinal, origin)
     local world = workspace:FindFirstChild("MergeDominionWorld"); if not world then return end
     local folder = world:FindFirstChild("Units_" .. player.UserId); if not folder then folder = Instance.new("Folder"); folder.Name = "Units_" .. player.UserId; folder.Parent = world end
     local stats = GameConfig.SoldierStats[level]; local model = Instance.new("Model"); model.Name = "Soldier_L" .. level; model:SetAttribute("OwnerUserId", player.UserId); model:SetAttribute("Level", level); model:SetAttribute("SoldierId", string.format("%d_%d_%d", player.UserId, level, ordinal)); model.Parent = folder
-    local position = Vector3.new(-12 + (ordinal % 8) * 4, 0, 28 + math.floor(ordinal / 8) * 5)
+    origin = origin or GameConfig.SoldierYardPosition
+    local position = origin + Vector3.new(-12 + (ordinal % 8) * 4, 0, -8 + math.floor(ordinal / 8) * 5)
     local base = position + Vector3.new(0, 0.6, 0)
     local torso = meshSoldierPart(model, "Torso", Vector3.new(1.65, 2.05, 1.05), base + Vector3.new(0, 2.2, 0), stats.Color, Enum.Material.SmoothPlastic, Enum.MeshType.Torso, Vector3.new(1.05, 1.05, 1.05))
     meshSoldierPart(model, "LeftLeg", Vector3.new(0.55, 1.45, 0.65), base + Vector3.new(-0.43, 0.65, 0), Color3.fromRGB(42, 57, 76), Enum.Material.SmoothPlastic, Enum.MeshType.Cylinder, Vector3.new(0.85, 1, 0.85))
@@ -206,12 +213,14 @@ local function syncSoldierVisuals(player, state, mergePosition, mergeColor)
     clearMergeSelection(player); local world = workspace:FindFirstChild("MergeDominionWorld"); if not world then return end
     local oldFolder = world:FindFirstChild("Units_" .. player.UserId); if oldFolder then oldFolder:Destroy() end
     local ordinal = 0
-    for level = 1, GameConfig.MaxSoldierLevel do for _ = 1, state.Soldiers[level] do addSoldierVisual(player, level, ordinal); ordinal += 1 end end
+    local origin = armyPosition(state.ArmyLocation)
+    for level = 1, GameConfig.MaxSoldierLevel do for _ = 1, state.Soldiers[level] do addSoldierVisual(player, level, ordinal, origin); ordinal += 1 end end
     if mergePosition then playMergeEffect(mergePosition, mergeColor or Color3.fromRGB(255, 225, 89)) end
 end
 
 handleSoldierPrompt = function(player, model)
     local state = DataService.get(player); if not state or not isOwnedSoldier(player, model) then return end
+    if state.ArmyStatus == "Traveling" or state.ArmyStatus == "Battling" then resultEvent:FireClient(player, {Message = "Your army is currently engaged in a campaign."}); return end
     local level = model:GetAttribute("Level")
     if level >= GameConfig.MaxSoldierLevel then resultEvent:FireClient(player, {Message = "Level 20 soldiers cannot merge further."}); return end
     local selected = mergeSelections[player]
@@ -239,22 +248,61 @@ local function setCityConquered(city, player)
     model:SetAttribute("Conquered", true); model:SetAttribute("ConqueredByUserId", player.UserId)
     local flag = model:FindFirstChild("CityFlag"); if flag then flag.Color = Color3.fromRGB(114, 205, 245) end
     local gate = model:FindFirstChild("CityGate"); if gate then gate.Color = Color3.fromRGB(45, 126, 205) end
+    local defenders = model:FindFirstChild("Defenders"); if defenders then defenders:Destroy() end
+end
+local function moveArmyModels(player, fromPosition, toPosition)
+    local folder = soldierFolder(player); if not folder then return end
+    local offsets = {}
+    for _, model in ipairs(folder:GetChildren()) do if model:IsA("Model") then offsets[model] = model:GetPivot().Position - fromPosition end end
+    local started = os.clock()
+    while os.clock() - started < GameConfig.ArmyTravelSeconds do
+        local alpha = math.clamp((os.clock() - started) / GameConfig.ArmyTravelSeconds, 0, 1)
+        local center = fromPosition:Lerp(toPosition, alpha)
+        for model, offset in pairs(offsets) do if model.Parent then model:PivotTo(CFrame.new(center + offset)) end end
+        task.wait(0.12)
+    end
+    for model, offset in pairs(offsets) do if model.Parent then model:PivotTo(CFrame.new(toPosition + offset)) end end
+end
+local function showBattle(player, city)
+    local folder = soldierFolder(player); local cityModel = world:FindFirstChild(city.Id); local enemies = cityModel and cityModel:FindFirstChild("Defenders")
+    local highlights = {}
+    local combatants = {}
+    for _, container in ipairs({folder, enemies}) do if container then for _, model in ipairs(container:GetChildren()) do if model:IsA("Model") then local highlight = Instance.new("Highlight"); highlight.FillColor = container == folder and Color3.fromRGB(100, 210, 255) or Color3.fromRGB(255, 95, 75); highlight.OutlineColor = highlight.FillColor; highlight.FillTransparency = 0.35; highlight.Parent = model; table.insert(highlights, highlight) end end end end
+    if folder then for _, model in ipairs(folder:GetChildren()) do if model:IsA("Model") then table.insert(combatants, model) end end end
+    if enemies then for _, model in ipairs(enemies:GetChildren()) do if model:IsA("Model") then table.insert(combatants, model) end end end
+    resultEvent:FireClient(player, {Message = "BATTLE! Your army is engaging the defenders of " .. city.Name .. "."})
+    local started = os.clock()
+    while os.clock() - started < GameConfig.BattleSeconds do
+        for _, highlight in ipairs(highlights) do if highlight.Parent then highlight.FillTransparency = 0.2 + ((os.clock() % 0.8) * 0.3) end end
+        for index, model in ipairs(combatants) do if model.Parent then local position = model:GetPivot().Position; local direction = index % 2 == 0 and 1 or -1; model:PivotTo(CFrame.new(position + Vector3.new(direction * 0.35, 0, math.sin(os.clock() * 8 + index) * 0.3))) end end
+        task.wait(0.25)
+    end
+    for _, highlight in ipairs(highlights) do if highlight.Parent then highlight:Destroy() end end
+end
+local function runAttackSequence(player, city, state, fromPosition)
+    moveArmyModels(player, fromPosition, city.Position)
+    state.ArmyStatus = "Battling"; sendState(player); showBattle(player, city)
+    local outcome = CombatService.resolve(state, city)
+    if outcome.Won then
+        state.Conquered[city.Id] = true; state.Currency += outcome.Reward; state.ArmyLocation = city.Id; state.ArmyStatus = "Stationed"; setCityConquered(city, player); syncSoldierVisuals(player, state)
+        resultEvent:FireClient(player, {Won = true, Message = "VICTORY! " .. city.Name .. " conquered. Your surviving army is stationed here. +" .. outcome.Reward .. " coins. +" .. city.IncomePerMinute .. " coins/min secured. Power " .. outcome.PlayerPower .. " vs " .. outcome.EnemyPower .. "."})
+    else
+        local lost = removeBattleLosses(state); state.ArmyLocation = city.Id; state.ArmyStatus = "Stationed"; syncSoldierVisuals(player, state)
+        resultEvent:FireClient(player, {Won = false, Message = "DEFEAT at " .. city.Name .. ". Lost " .. lost .. " soldiers. Survivors remain stationed near the battle site. Power " .. outcome.PlayerPower .. " vs " .. outcome.EnemyPower .. "."})
+    end
+    sendState(player)
 end
 local function attackCity(player, city)
     local state = DataService.get(player); if not state then return end
     if state.Conquered[city.Id] then resultEvent:FireClient(player, {Message = city.Name .. " is already conquered."}); return end
+    if state.ArmyStatus == "Traveling" or state.ArmyStatus == "Battling" then resultEvent:FireClient(player, {Message = "Your army is already on a campaign."}); return end
+    if totalSoldiers(state) <= 0 then resultEvent:FireClient(player, {Message = "You need at least one soldier before attacking."}); return end
     local now = os.clock(); local readyAt = cityCooldowns[player] or 0
     if now < readyAt then resultEvent:FireClient(player, {Message = "Battle cooldown: " .. math.ceil(readyAt - now) .. "s remaining."}); return end
     cityCooldowns[player] = now + GameConfig.CityAttackCooldown
-    local outcome = CombatService.resolve(state, city)
-    if outcome.Won then
-        state.Conquered[city.Id] = true; state.Currency += outcome.Reward; setCityConquered(city, player)
-        resultEvent:FireClient(player, {Won = true, Message = "VICTORY! " .. city.Name .. " conquered. +" .. outcome.Reward .. " coins. +" .. city.IncomePerMinute .. " coins/min secured. Power " .. outcome.PlayerPower .. " vs " .. outcome.EnemyPower .. "."})
-    else
-        local lost = removeBattleLosses(state); syncSoldierVisuals(player, state)
-        resultEvent:FireClient(player, {Won = false, Message = "DEFEAT at " .. city.Name .. ". Lost " .. lost .. " soldiers. Power " .. outcome.PlayerPower .. " vs " .. outcome.EnemyPower .. ". Recover and try again."})
-    end
-    sendState(player)
+    local fromPosition = armyPosition(state.ArmyLocation); state.ArmyStatus = "Traveling"; sendState(player)
+    resultEvent:FireClient(player, {Message = "Your army is marching from " .. state.ArmyLocation .. " to " .. city.Name .. "."})
+    task.spawn(runAttackSequence, player, city, state, fromPosition)
 end
 
 local function handleAction(player, action)
@@ -272,7 +320,7 @@ local function runGeneration(player)
     while player.Parent do
         task.wait(1); local state = DataService.get(player); if not state then break end
         local interval, remaining = generationInterval(state), generationTimers[player] or generationInterval(state)
-        if totalSoldiers(state) >= GameConfig.MaxSoldiers then remaining = 0 else remaining -= 1; if remaining <= 0 then state.Soldiers[1] += 1; syncSoldierVisuals(player, state); remaining = interval; resultEvent:FireClient(player, {Message = "A Level 1 soldier was generated in the Soldier Yard."}) end end
+        if totalSoldiers(state) >= GameConfig.MaxSoldiers then remaining = 0 else remaining -= 1; if remaining <= 0 then state.Soldiers[1] += 1; if state.ArmyStatus ~= "Traveling" and state.ArmyStatus ~= "Battling" then syncSoldierVisuals(player, state) end; remaining = interval; resultEvent:FireClient(player, {Message = "A Level 1 soldier was generated at your active base."}) end end
         generationTimers[player] = remaining; sendState(player)
     end
 end

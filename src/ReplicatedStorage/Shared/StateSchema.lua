@@ -10,17 +10,17 @@ function StateSchema.new()
         Soldiers = soldiers,
         Conquered = {},
         GenerationLevel = 1,
+        ArmyLocation = "MainBase",
+        ArmyStatus = "Idle",
     }
 end
 
 function StateSchema.sanitize(raw)
     local state = StateSchema.new()
     if type(raw) ~= "table" then return state end
-
     state.Currency = math.max(0, math.floor(tonumber(raw.Currency) or state.Currency))
     local generationLevel = math.floor(tonumber(raw.GenerationLevel) or 1)
     state.GenerationLevel = math.clamp(generationLevel, 1, #GameConfig.GenerationIntervals)
-
     local remainingCapacity = GameConfig.MaxSoldiers
     if type(raw.Soldiers) == "table" then
         for level = 1, GameConfig.MaxSoldierLevel do
@@ -30,12 +30,16 @@ function StateSchema.sanitize(raw)
             remainingCapacity -= accepted
         end
     end
-
     if type(raw.Conquered) == "table" then
         for id, conquered in pairs(raw.Conquered) do
             if conquered == true then state.Conquered[tostring(id)] = true end
         end
     end
+    local location = tostring(raw.ArmyLocation or "MainBase")
+    local validLocation = location == "MainBase"
+    for _, city in ipairs(GameConfig.EnemyCities) do if city.Id == location then validLocation = true end end
+    state.ArmyLocation = validLocation and location or "MainBase"
+    state.ArmyStatus = (raw.ArmyStatus == "Stationed" or raw.ArmyStatus == "Idle") and raw.ArmyStatus or "Idle"
     return state
 end
 
