@@ -12,6 +12,7 @@ function StateSchema.new()
         GenerationLevel = 1,
         ArmyLocation = "MainBase",
         ArmyStatus = "Idle",
+        ArmyDestination = nil,
     }
 end
 
@@ -40,6 +41,9 @@ function StateSchema.sanitize(raw)
     for _, city in ipairs(GameConfig.EnemyCities) do if city.Id == location then validLocation = true end end
     state.ArmyLocation = validLocation and location or "MainBase"
     state.ArmyStatus = (raw.ArmyStatus == "Stationed" or raw.ArmyStatus == "Idle") and raw.ArmyStatus or "Idle"
+    local destination = tostring(raw.ArmyDestination or "")
+    for _, city in ipairs(GameConfig.EnemyCities) do if city.Id == destination then state.ArmyDestination = destination end end
+    if state.ArmyStatus ~= "Traveling" then state.ArmyDestination = nil end
     return state
 end
 

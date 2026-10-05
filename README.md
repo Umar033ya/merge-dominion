@@ -46,16 +46,17 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 - The world contains ten staged city zones: Ember Outpost, Stonewatch, Frostkeep, Sunspire, Nightfall Citadel, Ironvale, Moonharbor, Cindercrest, Verdant Reach, and Dragonspire.
 - Each city is a distinct group of buildings with walls, gate, city sign, flag, configured defender composition, visible enemy soldier models, increasing difficulty, income, and a physical `E — Attack City` prompt.
 - City victories are calculated by the server from the player's current Level 1–20 army and the configured defender army. A short server cooldown prevents attack spam.
-- Pressing an attack prompt starts a server-controlled `Traveling` sequence. The existing player soldier models move together along the direct road route to the target city, then enter a short `Battling` presentation with highlighted/pulsing player and enemy models before the existing power calculation resolves.
+- Pressing an attack prompt starts a server-controlled `Traveling` sequence. The existing player soldier models preserve formation offsets, follow the connected road route (including a Main Base junction for city-to-city travel), rotate toward the route, and use a lightweight run/bob motion instead of sliding. A temporary destination marker identifies the target.
+- Campaign phases are explicit: `Traveling` → `Arriving` → `Fighting` → `Stationed`. The `Fighting` presentation highlights both armies, pulses their positions, and emits bounded hit particles and brief `HIT` indicators before the existing power calculation resolves.
 - A defeat does not damage or conquer the permanent Main Base. It removes a temporary fraction of the player's soldiers, leaves surviving models stationed at the battle city, and reports the player/enemy power comparison.
 - Conquered cities are stored in the existing `Conquered` state table and pay their configured income once per minute per player. The MENU shows each city's income and the total passive income per minute.
-- A victory removes the visible enemy defenders, changes the city flag and gate to player colors, sets the city as a controlled base, and leaves the surviving player army stationed there instead of returning it to Main Base.
+- A victory removes the visible enemy defenders, changes the city flag and gate to player colors, enables a subtle player territory ring, adds a `CONTROLLED` income badge, updates the city prompt, sets the city as a controlled base, and leaves the surviving player army stationed there instead of returning it to Main Base.
 - The MENU reports the stationed soldier count, controlled-city income, and total passive income.
 
 ## Army travel and controlled-base network
 
 - The existing soldier inventory remains the only authoritative army; no duplicate inventory or NPC system was added.
-- Persisted state now includes `ArmyLocation` and `ArmyStatus`. Valid statuses are `Idle`, `Traveling`, `Battling`, and `Stationed`; legacy saves default safely to `MainBase` and `Idle`.
+- Persisted state now includes `ArmyLocation`, `ArmyStatus`, and a validated transient `ArmyDestination`. Valid runtime statuses are `Idle`, `Traveling`, `Arriving`, `Fighting`, and `Stationed`; legacy saves default safely to `MainBase` and `Idle`.
 - New attacks launch from the current army location. After a victory, the next attack can begin from the newly conquered city. After a defeat, surviving soldiers remain at the battle location and the position is retained for the next session.
 - Generation and merging remain server-authoritative. During travel/battle, visual resynchronization waits until the sequence completes so the marching army is not teleported back by a timer tick.
 
@@ -73,7 +74,7 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 - Walk to a soldier and use the `E` ProximityPrompt to select it, then select another soldier of the same level to merge. The server validates ownership, level, and inventory before changing state.
 - A successful merge removes both source models, creates the higher-level character, and emits a short lightweight particle burst at the merge location.
 - Hold **Left Shift** to sprint. The sprint action also exposes a touch button through Roblox `ContextActionService`; releasing it returns movement to normal speed.
-- The side panel is hidden by default behind a small `MENU` button so the world stays visible. It still contains currency, generation status, capacity, speed upgrade, merge instructions, enemy cities, city income, and battle results.
+- The side panel is hidden by default behind a small `MENU` button so the world stays visible. Its city list is bounded and scrollable; it contains currency, exact generation countdown, `ARMY FULL` capacity feedback, speed upgrade, active army status/location/destination/distance, city defenders, distance/status, income, and battle results.
 
 ## Rojo build versus Play mode
 
