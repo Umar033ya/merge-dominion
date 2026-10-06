@@ -90,6 +90,9 @@ If the world still does not appear, open **View → Output** immediately after p
 
 ## Known testing notes
 
+- The stability pass makes remote creation idempotent, prevents duplicate player initialization/sprint connections, preserves a real generation countdown after the army reaches capacity, and normalizes partial client state payloads.
+- Campaign execution is wrapped with server-side recovery. If movement or battle presentation errors, the server logs the city/player context and safely regroups the army instead of leaving it permanently `Traveling`, `Arriving`, or `Fighting`. Player departure also stops active movement/battle presentation and cleans temporary models/effects.
+- These guards protect server state and ownership; city visuals are generated in the shared world, while each player's currency, army, soldiers, conquest table, rewards, and income remain stored and validated per player.
 - DataStore persistence requires a published experience and Studio API Services enabled; otherwise the game falls back to a fresh in-memory session and logs the save/load warning.
 - Static validation covers project mapping, required files, remote direction, state ownership, and Luau source review; actual Roblox API execution, Rojo synchronization, UI rendering, and DataStore behavior still require Roblox Studio.
 - This repository does not include a binary `.rbxlx` place file; the Rojo project is the source of truth and generates all runtime Instances. Roblox Studio testing requires the Rojo plugin/CLI connection.

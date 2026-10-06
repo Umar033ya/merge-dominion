@@ -7,6 +7,16 @@ local action, stateEvent, resultEvent, sprintEvent = remotes.Action, remotes.Sta
 local cities = {{Id = "EmberOutpost", Name = "Ember Outpost", Defenders = "Early • +25/min"}, {Id = "Stonewatch", Name = "Stonewatch", Defenders = "Early • +40/min"}, {Id = "Frostkeep", Name = "Frostkeep", Defenders = "Early • +55/min"}, {Id = "Sunspire", Name = "Sunspire", Defenders = "Middle • +70/min"}, {Id = "NightfallCitadel", Name = "Nightfall Citadel", Defenders = "Middle • +85/min"}, {Id = "Ironvale", Name = "Ironvale", Defenders = "Middle • +105/min"}, {Id = "Moonharbor", Name = "Moonharbor", Defenders = "Middle • +125/min"}, {Id = "Cindercrest", Name = "Cindercrest", Defenders = "Late • +150/min"}, {Id = "VerdantReach", Name = "Verdant Reach", Defenders = "Late • +180/min"}, {Id = "Dragonspire", Name = "Dragonspire", Defenders = "Late • +230/min"}}
 local state = {Currency = 0, Soldiers = {}, Conquered = {}, Cities = {}, GenerationInterval = 60, GenerationRemaining = 60, NextUpgradeCost = 50, SoldierCount = 0, MaxSoldiers = 20, HighestLevel = 0, TotalIncomePerMinute = 0, ArmyLocation = "MainBase", ArmyStatus = "Idle"}
 for level = 1, 20 do state.Soldiers[level] = 0 end
+local function normalizeState(nextState)
+    if type(nextState) ~= "table" then return state end
+    nextState.Soldiers = type(nextState.Soldiers) == "table" and nextState.Soldiers or {}
+    for level = 1, 20 do nextState.Soldiers[level] = tonumber(nextState.Soldiers[level]) or 0 end
+    nextState.Cities = type(nextState.Cities) == "table" and nextState.Cities or {}
+    nextState.Conquered = type(nextState.Conquered) == "table" and nextState.Conquered or {}
+    nextState.Currency = tonumber(nextState.Currency) or 0; nextState.SoldierCount = tonumber(nextState.SoldierCount) or 0; nextState.MaxSoldiers = tonumber(nextState.MaxSoldiers) or 20
+    nextState.GenerationInterval = tonumber(nextState.GenerationInterval) or 60; nextState.GenerationRemaining = tonumber(nextState.GenerationRemaining) or nextState.GenerationInterval
+    return nextState
+end
 
 local gui = Instance.new("ScreenGui"); gui.Name, gui.ResetOnSpawn, gui.Parent = "MergeDominionUI", false, player:WaitForChild("PlayerGui")
 local function panel(parent, size, position, color) local f = Instance.new("Frame"); f.Size, f.Position, f.BackgroundColor3, f.BorderSizePixel, f.Parent = size, position, color, 0, parent; local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 12); c.Parent = f; return f end
@@ -57,6 +67,6 @@ local function setSprint(held) if sprintHeld == held then return end; sprintHeld
 local function sprintAction(_, inputState) if inputState == Enum.UserInputState.Begin then setSprint(true) elseif inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then setSprint(false) end; return Enum.ContextActionResult.Pass end
 ContextActionService:BindAction("MergeDominionSprint", sprintAction, true, Enum.KeyCode.LeftShift); ContextActionService:SetTitle("MergeDominionSprint", "SPRINT")
 task.spawn(function() while player.Parent do task.wait(0.2); if sprintHeld then sprintEvent:FireServer(true) end end end)
-stateEvent.OnClientEvent:Connect(function(nextState) state = nextState; render() end)
-resultEvent.OnClientEvent:Connect(function(payload) result.Text = payload.Message or ""; result.TextColor3 = payload.Won and Color3.fromRGB(112, 238, 163) or Color3.fromRGB(255, 213, 104); render() end)
+stateEvent.OnClientEvent:Connect(function(nextState) state = normalizeState(nextState); render() end)
+resultEvent.OnClientEvent:Connect(function(payload) payload = type(payload) == "table" and payload or {}; result.Text = payload.Message or ""; result.TextColor3 = payload.Won and Color3.fromRGB(112, 238, 163) or Color3.fromRGB(255, 213, 104); render() end)
 render(); action:FireServer("RequestState")

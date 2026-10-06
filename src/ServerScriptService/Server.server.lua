@@ -3,11 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 
-local remotes = Instance.new("Folder"); remotes.Name = "Remotes"; remotes.Parent = ReplicatedStorage
-local actionEvent = Instance.new("RemoteEvent"); actionEvent.Name = "Action"; actionEvent.Parent = remotes
-local stateEvent = Instance.new("RemoteEvent"); stateEvent.Name = "State"; stateEvent.Parent = remotes
-local resultEvent = Instance.new("RemoteEvent"); resultEvent.Name = "BattleResult"; resultEvent.Parent = remotes
-local sprintEvent = Instance.new("RemoteEvent"); sprintEvent.Name = "Sprint"; sprintEvent.Parent = remotes
+local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder"); remotes.Name = "Remotes"; remotes.Parent = ReplicatedStorage
+local function getRemote(name)
+    local remote = remotes:FindFirstChild(name); if remote and not remote:IsA("RemoteEvent") then remote:Destroy(); remote = nil end; remote = remote or Instance.new("RemoteEvent"); remote.Name, remote.Parent = name, remotes; return remote
+end
+local actionEvent = getRemote("Action")
+local stateEvent = getRemote("State")
+local resultEvent = getRemote("BattleResult")
+local sprintEvent = getRemote("Sprint")
 
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local worldBuilderOk, WorldBuilder = pcall(require, script.Parent.Services.WorldBuilder)
@@ -57,7 +60,7 @@ local world = buildWorldOrFail()
 local DataService = require(script.Parent.Services.DataService)
 local CombatService = require(script.Parent.Services.CombatService)
 
-local generationTimers, mergeSelections, sprintStates, cityCooldowns = {}, {}, {}, {}
+local generationTimers, mergeSelections, sprintStates, cityCooldowns, initializedPlayers = {}, {}, {}, {}, {}
 local handleSoldierPrompt
 
 local function totalSoldiers(state)
@@ -281,6 +284,7 @@ local function moveArmyModels(player, fromPosition, toPosition, city)
         local segmentTime = GameConfig.ArmyTravelSeconds * segmentLength / math.max(totalLength, 1)
         local started = os.clock()
         while os.clock() - started < segmentTime do
+            if not player.Parent then if marker.Parent then marker:Destroy() end; return end
             local alpha = math.clamp((os.clock() - started) / segmentTime, 0, 1)
             local center = startPosition:Lerp(endPosition, alpha)
             local direction = (endPosition - startPosition).Unit
@@ -315,6 +319,7 @@ local function showBattle(player, city)
     local started = os.clock()
     local lastHit = 0
     while os.clock() - started < GameConfig.BattleSeconds do
+        if not player.Parent then for _, highlight in ipairs(highlights) do if highlight.Parent then highlight:Destroy() end end; return end
         for _, highlight in ipairs(highlights) do if highlight.Parent then highlight.FillTransparency = 0.2 + ((os.clock() % 0.8) * 0.3) end end
         for index, model in ipairs(combatants) do if model.Parent then local position = model:GetPivot().Position; local direction = index % 2 == 0 and 1 or -1; local target = model:GetAttribute("EnemyLevel") and playerCenter or enemyCenter; local nextPosition = position + Vector3.new(direction * 0.35, 0, math.sin(os.clock() * 8 + index) * 0.3); model:PivotTo(CFrame.lookAt(nextPosition, Vector3.new(target.X, nextPosition.Y, target.Z))) end end
         if os.clock() - lastHit > 0.55 and #combatants > 0 then lastHit = os.clock(); local target = combatants[math.floor(os.clock() * 10) % #combatants + 1]; spawnHitEffect(target, target:GetAttribute("EnemyLevel") and Color3.fromRGB(255, 105, 90) or Color3.fromRGB(125, 220, 255)) end
@@ -322,8 +327,9 @@ local function showBattle(player, city)
     end
     for _, highlight in ipairs(highlights) do if highlight.Parent then highlight:Destroy() end end
 end
-local function runAttackSequence(player, city, state, fromPosition)
+local function runAttackSequenceUnsafe(player, city, state, fromPosition)
     moveArmyModels(player, fromPosition, city.Position, city)
+    if not player.Parent then return end
     state.ArmyStatus = "Arriving"; sendState(player); resultEvent:FireClient(player, {Message = "Your army has arrived at " .. city.Name .. ". Forming up at the gate."}); task.wait(1)
     state.ArmyStatus = "Fighting"; sendState(player); showBattle(player, city)
     local outcome = CombatService.resolve(state, city)
@@ -336,6 +342,16 @@ local function runAttackSequence(player, city, state, fromPosition)
         resultEvent:FireClient(player, {Won = false, Message = "DEFEAT at " .. city.Name .. ". Lost " .. lost .. " soldiers. Survivors remain stationed near the battle site. Power " .. outcome.PlayerPower .. " vs " .. outcome.EnemyPower .. "."})
     end
     sendState(player)
+end
+local function runAttackSequence(player, city, state, fromPosition)
+    local ok, errorMessage = xpcall(function() runAttackSequenceUnsafe(player, city, state, fromPosition) end, debug.traceback)
+    if not ok then
+        warn("[MergeDominion] Campaign failed for " .. player.Name .. " at " .. city.Id .. ": " .. tostring(errorMessage))
+        if player.Parent and DataService.get(player) == state then
+            state.ArmyStatus, state.ArmyDestination = "Stationed", nil
+            syncSoldierVisuals(player, state); resultEvent:FireClient(player, {Won = false, Message = "Campaign interrupted safely. Your army has regrouped at " .. state.ArmyLocation .. "."}); sendState(player)
+        end
+    end
 end
 local function attackCity(player, city)
     local state = DataService.get(player); if not state then return end
@@ -365,7 +381,7 @@ local function runGeneration(player)
     while player.Parent do
         task.wait(1); local state = DataService.get(player); if not state then break end
         local interval, remaining = generationInterval(state), generationTimers[player] or generationInterval(state)
-        if totalSoldiers(state) >= GameConfig.MaxSoldiers then remaining = 0 else remaining -= 1; if remaining <= 0 then state.Soldiers[1] += 1; if state.ArmyStatus ~= "Traveling" and state.ArmyStatus ~= "Arriving" and state.ArmyStatus ~= "Fighting" then syncSoldierVisuals(player, state) end; remaining = interval; resultEvent:FireClient(player, {Message = "A Level 1 soldier was generated at your active base."}) end end
+        if totalSoldiers(state) >= GameConfig.MaxSoldiers then remaining = math.max(remaining, interval) else remaining -= 1; if remaining <= 0 then state.Soldiers[1] += 1; if state.ArmyStatus ~= "Traveling" and state.ArmyStatus ~= "Arriving" and state.ArmyStatus ~= "Fighting" then syncSoldierVisuals(player, state) end; remaining = interval; resultEvent:FireClient(player, {Message = "A Level 1 soldier was generated at your active base."}) end end
         generationTimers[player] = remaining; sendState(player)
     end
 end
@@ -376,6 +392,7 @@ local function runCityIncome(player)
     end
 end
 local function setupSprint(player)
+    if sprintStates[player] then return end
     sprintStates[player] = {Requested = false, LastSignal = 0}
     player.CharacterAdded:Connect(function(character) local humanoid = character:WaitForChild("Humanoid", 5); if humanoid then humanoid.WalkSpeed = GameConfig.DefaultWalkSpeed end end)
 end
@@ -386,9 +403,14 @@ end)
 
 for _, city in ipairs(GameConfig.EnemyCities) do local model = world:FindFirstChild(city.Id); local prompt = model and model:FindFirstChild("AttackPrompt", true); if prompt then prompt.Triggered:Connect(function(player) attackCity(player, city) end) end end
 local function initializePlayer(player)
-    DataService.load(player); local state = DataService.get(player); if state then for _, city in ipairs(GameConfig.EnemyCities) do if state.Conquered[city.Id] then setCityConquered(city, player) end end; generationTimers[player] = generationInterval(state); syncSoldierVisuals(player, state); task.defer(function() sendState(player) end); task.spawn(runGeneration, player); task.spawn(runCityIncome, player) end
+    if initializedPlayers[player] then return end
+    initializedPlayers[player] = true
+    local ok, state = pcall(DataService.load, player)
+    if not ok then initializedPlayers[player] = nil; warn("[MergeDominion] Player initialization failed for " .. player.Name .. ": " .. tostring(state)); return end
+    state = DataService.get(player)
+    if state then for _, city in ipairs(GameConfig.EnemyCities) do if state.Conquered[city.Id] then setCityConquered(city, player) end end; generationTimers[player] = generationInterval(state); syncSoldierVisuals(player, state); task.defer(function() sendState(player) end); task.spawn(runGeneration, player); task.spawn(runCityIncome, player) end
 end
 Players.PlayerAdded:Connect(setupSprint); Players.PlayerAdded:Connect(initializePlayer)
-Players.PlayerRemoving:Connect(function(player) generationTimers[player], sprintStates[player], cityCooldowns[player] = nil, nil, nil; cleanupSoldierVisuals(player) end)
+Players.PlayerRemoving:Connect(function(player) initializedPlayers[player], generationTimers[player], sprintStates[player], cityCooldowns[player] = nil, nil, nil, nil; cleanupSoldierVisuals(player) end)
 for _, player in Players:GetPlayers() do setupSprint(player); task.spawn(initializePlayer, player) end
 actionEvent.OnServerEvent:Connect(handleAction)
