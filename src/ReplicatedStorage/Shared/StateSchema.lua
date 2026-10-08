@@ -10,6 +10,7 @@ function StateSchema.new()
         Soldiers = soldiers,
         Conquered = {},
         GenerationLevel = 1,
+        SpawnLevel = 1,
         ArmyLocation = "MainBase",
         ArmyStatus = "Idle",
         ArmyDestination = nil,
@@ -22,6 +23,7 @@ function StateSchema.sanitize(raw)
     state.Currency = math.max(0, math.floor(tonumber(raw.Currency) or state.Currency))
     local generationLevel = math.floor(tonumber(raw.GenerationLevel) or 1)
     state.GenerationLevel = math.clamp(generationLevel, 1, #GameConfig.GenerationIntervals)
+    state.SpawnLevel = math.clamp(math.floor(tonumber(raw.SpawnLevel) or 1), 1, GameConfig.MaxSoldierLevel)
     local remainingCapacity = GameConfig.MaxSoldiers
     if type(raw.Soldiers) == "table" then
         for level = 1, GameConfig.MaxSoldierLevel do

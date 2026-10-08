@@ -28,15 +28,16 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 - Soldiers are generated automatically by the server; there is no manual recruit action.
 - Two matching soldiers merge through Level 20; Level 20 cannot merge further. Merging is performed with the in-world soldier ProximityPrompts.
 - Combat compares total player attack to the target's fixed defender attack; ties win and outcomes are shown in the HUD.
+- Player and enemy soldiers now carry server-authoritative `Health` and `MaxHealth` attributes derived from level, with compact overhead health bars. Battle pulses apply real damage to both sides and remove defeated models; the existing power resolution remains the final outcome authority.
 - Victories mark an enemy city conquered, award its configured reward, and unlock that city's passive income.
-- Currency, Level 1–20 soldier counts, generation upgrades, and conquered city IDs are saved in `MergeDominion_MVP_v1`.
+- Currency, Level 1–20 soldier counts, speed upgrades, spawn level, and conquered city IDs are saved in `MergeDominion_MVP_v1`.
 
 ## Phase 2 world foundation
 
 - The permanent Main Base is a distinct blue house with a spawn point, entrance, flag, and safe label.
 - The Soldier Yard sits directly in front of the Main Base; generated soldier models appear there.
 - A larger road network connects the Main Base to ten separated city territories across the map.
-- Cities use progressively stronger visual defenses: multiple buildings, towers, city flags, signs, and themed colors.
+- Cities use progressively stronger visual defenses: platforms, multiple buildings, towers, walls, gates, flags, themed colors, and marked defender spawn areas.
 - Trees, rocks, ground accents, and road borders provide visual separation without creating a large map.
 - A solid ground floor keeps buildings, roads, Soldier Yard objects, and decorations grounded.
 - Physical checkpoint markers are placed near the Main Base and before Ember Outpost, Stonewatch, and Frostkeep. They are prepared for a future respawn system but do not change respawn behavior yet.
@@ -52,6 +53,7 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 - Conquered cities are stored in the existing `Conquered` state table and pay their configured income once per minute per player. The MENU shows each city's income and the total passive income per minute.
 - A victory removes the visible enemy defenders, changes the city flag and gate to player colors, enables a subtle player territory ring, adds a `CONTROLLED` income badge, updates the city prompt, sets the city as a controlled base, and leaves the surviving player army stationed there instead of returning it to Main Base.
 - The MENU reports the stationed soldier count, controlled-city income, and total passive income.
+- Enemy defenders use the same level-colored soldier silhouette style as player units, expose level labels and health bars, and perform lightweight patrol motion on the shared server Heartbeat. During an attack they stage near the battle area and are marked as active combatants.
 
 ## Army travel and controlled-base network
 
@@ -66,6 +68,7 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 - The default maximum is 20 total soldiers across Levels 1–20. At capacity, generation pauses and resumes after merging frees a slot.
 - Conquering enemy cities awards configured coin rewards. Those coins can purchase generation-speed upgrades: 60s, 50s, 40s, 30s, 20s, 15s, then 10s.
 - The HUD shows the server-reported countdown, current interval, capacity, next upgrade cost, and upgrade control. There is no manual recruit button.
+- The MENU also shows `SPAWN LEVEL` and a server-validated upgrade button. Coins unlock the automatic generation level from 1 through 20; the existing speed upgrade and 20-soldier capacity remain independent.
 
 ## Soldier interaction and movement polish
 
@@ -91,6 +94,7 @@ If the world still does not appear, open **View → Output** immediately after p
 ## Known testing notes
 
 - The stability pass makes remote creation idempotent, prevents duplicate player initialization/sprint connections, preserves a real generation countdown after the army reaches capacity, and normalizes partial client state payloads.
+- City income is credited per conquered city once per income interval, updates the server currency and MENU together, and logs concise `[CityIncome] Player X +Y coins from CityName` messages for Studio verification.
 - Campaign execution is wrapped with server-side recovery. If movement or battle presentation errors, the server logs the city/player context and safely regroups the army instead of leaving it permanently `Traveling`, `Arriving`, or `Fighting`. Player departure also stops active movement/battle presentation and cleans temporary models/effects.
 - These guards protect server state and ownership; city visuals are generated in the shared world, while each player's currency, army, soldiers, conquest table, rewards, and income remain stored and validated per player.
 - DataStore persistence requires a published experience and Studio API Services enabled; otherwise the game falls back to a fresh in-memory session and logs the save/load warning.

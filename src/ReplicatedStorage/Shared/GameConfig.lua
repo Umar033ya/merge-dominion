@@ -4,6 +4,7 @@ local GameConfig = {
     MaxSoldiers = 20,
     GenerationIntervals = {60, 50, 40, 30, 20, 15, 10},
     GenerationUpgradeCosts = {50, 75, 100, 125, 150, 200},
+    GenerationLevelUpgradeCosts = {},
     DefaultWalkSpeed = 16,
     SprintWalkSpeed = 24,
     MaxSoldierLevel = 20,
@@ -47,6 +48,7 @@ for level = 1, GameConfig.MaxSoldierLevel do
         AccentColor = palette.AccentColor,
         Tier = tier,
     }
+    if level < GameConfig.MaxSoldierLevel then GameConfig.GenerationLevelUpgradeCosts[level] = 150 + level * 100 end
 end
 
 return GameConfig

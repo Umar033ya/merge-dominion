@@ -51,6 +51,12 @@ local function checkpoint(parent, id, name, position)
     part(model, "CheckpointFlag", Vector3.new(5, 2, 0.25), position + Vector3.new(2.3, 3.3, 0), Color3.fromRGB(255, 216, 91), Enum.Material.Fabric)
     label(model, "CHECKPOINT\n" .. name, position + Vector3.new(0, 3, 0), Color3.fromRGB(255, 241, 164), 220)
 end
+local function addHealthBar(parent, adornee, maxHealth)
+    local gui = Instance.new("BillboardGui"); gui.Name, gui.Size, gui.StudsOffset, gui.AlwaysOnTop, gui.MaxDistance, gui.Adornee, gui.Parent = "HealthBar", UDim2.fromOffset(54, 8), Vector3.new(0, 4.5, 0), true, 120, adornee, parent
+    local background = Instance.new("Frame"); background.Name, background.Size, background.BackgroundColor3, background.BorderSizePixel, background.Parent = "Background", UDim2.fromScale(1, 1), Color3.fromRGB(30, 35, 40), 0, gui
+    local fill = Instance.new("Frame"); fill.Name, fill.Size, fill.BackgroundColor3, fill.BorderSizePixel, fill.Parent = "Fill", UDim2.fromScale(1, 1), Color3.fromRGB(80, 220, 115), 0, background
+    gui:SetAttribute("MaxHealth", maxHealth)
+end
 local function mainBase(world)
     local p = GameConfig.MainBasePosition
     local model = Instance.new("Model"); model.Name, model.Parent = "MainBase", world; model:SetAttribute("Permanent", true); model:SetAttribute("BaseType", "PlayerMainBase")
@@ -62,12 +68,20 @@ local function mainBase(world)
     part(yard, "YardFloor", Vector3.new(38, 0.4, 24), y + Vector3.new(0, 0.2, 0), COLORS.GroundAccent, Enum.Material.Ground); part(yard, "YardBorderFront", Vector3.new(38, 1.2, 1), y + Vector3.new(0, 0.8, -12), COLORS.MainLight, Enum.Material.Neon); part(yard, "YardBorderBack", Vector3.new(38, 1.2, 1), y + Vector3.new(0, 0.8, 12), COLORS.MainLight, Enum.Material.Neon); label(yard, "SOLDIER YARD • CREATE & MERGE", y + Vector3.new(0, 4, 0), Color3.fromRGB(203, 255, 214), 280)
 end
 local function defenderModel(parent, city, level, ordinal, position, theme)
-    local stats = GameConfig.SoldierStats[level]; local model = Instance.new("Model"); model.Name = "Defender_L" .. level .. "_" .. ordinal; model:SetAttribute("EnemyLevel", level); model.Parent = parent
-    local body = part(model, "Body", Vector3.new(1.4, 2.2, 1.1), position + Vector3.new(0, 1.2, 0), theme.Wall, Enum.Material.Metal)
-    local head = part(model, "Head", Vector3.new(1.1, 1.1, 1.1), position + Vector3.new(0, 2.9, 0), theme.Accent, Enum.Material.SmoothPlastic); head.Shape = Enum.PartType.Ball
-    local helmet = part(model, "Helmet", Vector3.new(1.3, 0.4, 1.3), position + Vector3.new(0, 3.45, 0), theme.Accent, Enum.Material.Metal); helmet.Shape = Enum.PartType.Ball
-    part(model, "Weapon", Vector3.new(0.18, 2.1, 0.18), position + Vector3.new(0.85, 1.2, 0), stats.AccentColor, Enum.Material.Metal)
-    label(model, "L" .. level, position + Vector3.new(0, 3.6, 0), stats.AccentColor, 70)
+    local stats = GameConfig.SoldierStats[level]; local model = Instance.new("Model"); model.Name = "Defender_L" .. level .. "_" .. ordinal; model:SetAttribute("EnemyLevel", level); model:SetAttribute("MaxHealth", stats.Health); model:SetAttribute("Health", stats.Health); model:SetAttribute("PatrolOrigin", position); model:SetAttribute("PatrolPhase", ordinal * 0.7); model.Parent = parent
+    local function mesh(name, size, offset, color, meshType)
+        local item = part(model, name, size, position + offset, color, Enum.Material.SmoothPlastic); local meshObject = Instance.new("SpecialMesh"); meshObject.MeshType = meshType or Enum.MeshType.FileMesh; meshObject.Scale = Vector3.new(1, 1, 1); meshObject.Parent = item; return item
+    end
+    local torso = mesh("Torso", Vector3.new(1.55, 2, 1.05), Vector3.new(0, 2.2, 0), stats.Color, Enum.MeshType.Torso)
+    mesh("LeftLeg", Vector3.new(0.5, 1.4, 0.6), Vector3.new(-0.4, 0.7, 0), Color3.fromRGB(42, 57, 76), Enum.MeshType.Cylinder)
+    mesh("RightLeg", Vector3.new(0.5, 1.4, 0.6), Vector3.new(0.4, 0.7, 0), Color3.fromRGB(42, 57, 76), Enum.MeshType.Cylinder)
+    mesh("Head", Vector3.new(1.35, 1.35, 1.25), Vector3.new(0, 4, 0), Color3.fromRGB(255, 205, 164), Enum.MeshType.Head)
+    mesh("Helmet", Vector3.new(1.6, 0.6, 1.45), Vector3.new(0, 4.7, 0), stats.AccentColor, Enum.MeshType.Sphere)
+    mesh("LeftArm", Vector3.new(0.5, 1.6, 0.55), Vector3.new(-1, 2.2, 0), stats.Color, Enum.MeshType.Cylinder)
+    mesh("RightArm", Vector3.new(0.5, 1.6, 0.55), Vector3.new(1, 2.2, 0), stats.Color, Enum.MeshType.Cylinder)
+    part(model, "Weapon", Vector3.new(0.18, 2.1, 0.18), position + Vector3.new(0.9, 1.5, -0.1), stats.AccentColor, Enum.Material.Metal)
+    addHealthBar(model, torso, stats.Health)
+    label(model, stats.Name .. " • L" .. level, position + Vector3.new(0, 3.6, 0), stats.AccentColor, 110)
     return model
 end
 local function cityZone(world, index, city)
@@ -78,6 +92,7 @@ local function cityZone(world, index, city)
     for building = 1, 5 do local x = ((building - 1) % 3 - 1) * (footprint / 3); local z = (math.floor((building - 1) / 3) - 0.5) * (footprint / 2); local height = 7 + ((building + index) % 3) * 3; part(model, "CityBuilding", Vector3.new(7, height, 7), position + Vector3.new(x, 2 + height / 2, z), theme.Wall, Enum.Material.Brick); part(model, "BuildingRoof", Vector3.new(8, 1.2, 8), position + Vector3.new(x, 2 + height + 0.6, z), theme.Accent, Enum.Material.Slate) end
     local towerHeight = 12 + index * 1.5
     for _, x in ipairs({-footprint / 2 + 4, footprint / 2 - 4}) do part(model, "CityTower", Vector3.new(5, towerHeight, 5), position + Vector3.new(x, 1 + towerHeight / 2, 0), theme.Wall, Enum.Material.Brick); part(model, "CityBeacon", Vector3.new(2.5, 1, 2.5), position + Vector3.new(x, 2 + towerHeight, 0), theme.Accent, Enum.Material.Neon) end
+    part(model, "DefenderSpawn", Vector3.new(18, 0.18, 12), position + Vector3.new(0, 2.1, -5), theme.Accent, Enum.Material.Neon).Transparency = 0.55
     local gate = part(model, "CityGate", Vector3.new(10, 7 + index / 2, 1), position + Vector3.new(0, 4.5 + index / 4, footprint / 2), theme.Accent, Enum.Material.Wood)
     part(model, "CityWallLeft", Vector3.new(2, 5, footprint), position + Vector3.new(-footprint / 2, 3.5, 0), theme.Wall, Enum.Material.Brick); part(model, "CityWallRight", Vector3.new(2, 5, footprint), position + Vector3.new(footprint / 2, 3.5, 0), theme.Wall, Enum.Material.Brick)
     part(model, "CityFlag", Vector3.new(7, 3.5, 0.25), position + Vector3.new(4, 13 + index, 0), theme.Accent, Enum.Material.Fabric)
