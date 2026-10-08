@@ -97,15 +97,15 @@ local function cityZone(world, index, city)
     part(model, "CityWallLeft", Vector3.new(2, 5, footprint), position + Vector3.new(-footprint / 2, 3.5, 0), theme.Wall, Enum.Material.Brick); part(model, "CityWallRight", Vector3.new(2, 5, footprint), position + Vector3.new(footprint / 2, 3.5, 0), theme.Wall, Enum.Material.Brick)
     part(model, "CityFlag", Vector3.new(7, 3.5, 0.25), position + Vector3.new(4, 13 + index, 0), theme.Accent, Enum.Material.Fabric)
     local defenderFolder = Instance.new("Folder"); defenderFolder.Name, defenderFolder.Parent = "Defenders", model
-    local ordinal = 0; for _, group in ipairs(city.Defenders) do for _ = 1, group.Count do ordinal += 1; local offset = Vector3.new(((ordinal - 1) % 4 - 1.5) * 4, 0, math.floor((ordinal - 1) / 4) * 4 - 5); defenderModel(defenderFolder, city, group.Level, ordinal, position + offset, theme) end end
+    local ordinal = 0; for _, group in ipairs(city.Defenders) do for _ = 1, group.Count do ordinal += 1; local offset = Vector3.new(((ordinal - 1) % 4 - 1.5) * 4, 2, math.floor((ordinal - 1) / 4) * 4 - 5); defenderModel(defenderFolder, city, group.Level, ordinal, position + offset, theme) end end
     local total = 0; for _, g in ipairs(city.Defenders) do total += g.Count end
     label(model, string.format("CITY %d • %s\n%d visible defenders • +%d/min", index, city.Name, total, city.IncomePerMinute), position + Vector3.new(0, 15 + index, 0), Color3.fromRGB(255, 231, 205), 320)
     local prompt = Instance.new("ProximityPrompt"); prompt.Name, prompt.ActionText, prompt.ObjectText, prompt.KeyboardKeyCode, prompt.HoldDuration, prompt.MaxActivationDistance, prompt.RequiresLineOfSight, prompt.Parent = "AttackPrompt", "Attack City", city.Name, Enum.KeyCode.E, 0, 14, false, gate
 end
 
 function WorldBuilder.build()
-    local existing = workspace:FindFirstChild("MergeDominionWorld"); if existing and existing:GetAttribute("WorldReady") == true and existing:GetAttribute("BuildVersion") == "ten-city-army-network-v1" then return existing end; if existing then existing:Destroy() end
-    local world = Instance.new("Folder"); world.Name, world.Parent = "MergeDominionWorld", workspace; world:SetAttribute("WorldReady", false); world:SetAttribute("BuildVersion", "ten-city-army-network-v1")
+    local existing = workspace:FindFirstChild("MergeDominionWorld"); if existing and existing:GetAttribute("WorldReady") == true and existing:GetAttribute("BuildVersion") == "ten-city-army-network-v2" then return existing end; if existing then existing:Destroy() end
+    local world = Instance.new("Folder"); world.Name, world.Parent = "MergeDominionWorld", workspace; world:SetAttribute("WorldReady", false); world:SetAttribute("BuildVersion", "ten-city-army-network-v2")
     part(world, "ArenaGround", Vector3.new(560, 2, 520), Vector3.new(0, -1, 110), COLORS.Ground, Enum.Material.Grass); part(world, "ArenaInset", Vector3.new(540, 0.05, 500), Vector3.new(0, 0.025, 110), COLORS.GroundAccent, Enum.Material.Ground)
     mainBase(world)
     local roads = Instance.new("Folder"); roads.Name, roads.Parent = "RoadNetwork", world

@@ -9,6 +9,7 @@ function StateSchema.new()
         Currency = GameConfig.StartingCurrency,
         Soldiers = soldiers,
         Conquered = {},
+        StationedSoldiers = {},
         GenerationLevel = 1,
         SpawnLevel = 1,
         ArmyLocation = "MainBase",
@@ -36,6 +37,16 @@ function StateSchema.sanitize(raw)
     if type(raw.Conquered) == "table" then
         for id, conquered in pairs(raw.Conquered) do
             if conquered == true then state.Conquered[tostring(id)] = true end
+        end
+    end
+    if type(raw.StationedSoldiers) == "table" then
+        for _, city in ipairs(GameConfig.EnemyCities) do
+            local source = raw.StationedSoldiers[city.Id]; local stationed = {}; local hasSoldiers = false
+            for level = 1, GameConfig.MaxSoldierLevel do
+                local requested = type(source) == "table" and math.max(0, math.floor(tonumber(source[level]) or 0)) or 0
+                local accepted = math.min(requested, remainingCapacity); stationed[level] = accepted; remainingCapacity -= accepted; if accepted > 0 then hasSoldiers = true end
+            end
+            if hasSoldiers and state.Conquered[city.Id] then state.StationedSoldiers[city.Id] = stationed end
         end
     end
     local location = tostring(raw.ArmyLocation or "MainBase")

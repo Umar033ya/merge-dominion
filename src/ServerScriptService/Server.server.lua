@@ -63,14 +63,23 @@ local CombatService = require(script.Parent.Services.CombatService)
 local generationTimers, mergeSelections, sprintStates, cityCooldowns, initializedPlayers = {}, {}, {}, {}, {}
 local handleSoldierPrompt
 
+local function activeSoldiers(state)
+    local total = 0; for level = 1, GameConfig.MaxSoldierLevel do total += state.Soldiers[level] end; return total
+end
 local function totalSoldiers(state)
-    local total = 0
-    for level = 1, GameConfig.MaxSoldierLevel do total += state.Soldiers[level] end
+    local total = activeSoldiers(state)
+    for _, stationed in pairs(state.StationedSoldiers or {}) do for level = 1, GameConfig.MaxSoldierLevel do total += stationed[level] or 0 end end
     return total
 end
 local function highestLevel(state)
     for level = GameConfig.MaxSoldierLevel, 1, -1 do if state.Soldiers[level] > 0 then return level end end
+    for level = GameConfig.MaxSoldierLevel, 1, -1 do for _, stationed in pairs(state.StationedSoldiers or {}) do if (stationed[level] or 0) > 0 then return level end end end
     return 0
+end
+local function stationedSoldierCount(state, cityId)
+    local total = 0; local stationed = state.StationedSoldiers and state.StationedSoldiers[cityId]
+    if stationed then for level = 1, GameConfig.MaxSoldierLevel do total += stationed[level] or 0 end end
+    return total
 end
 local function generationInterval(state) return GameConfig.GenerationIntervals[state.GenerationLevel] or GameConfig.GenerationIntervals[1] end
 local function nextUpgradeCost(state) return GameConfig.GenerationUpgradeCosts[state.GenerationLevel] end
@@ -92,7 +101,7 @@ local function defenderSummary(city)
 end
 local function citySummary(state)
     local summary = {}
-    for _, city in ipairs(GameConfig.EnemyCities) do summary[city.Id] = {Name = city.Name, Defenders = defenderSummary(city), IncomePerMinute = city.IncomePerMinute, Conquered = state.Conquered[city.Id] == true, Stationed = state.ArmyLocation == city.Id, StationedCount = state.ArmyLocation == city.Id and totalSoldiers(state) or 0, Distance = math.floor((city.Position - armyPosition(state.ArmyLocation)).Magnitude), Target = state.ArmyDestination == city.Id} end
+    for _, city in ipairs(GameConfig.EnemyCities) do summary[city.Id] = {Name = city.Name, Defenders = defenderSummary(city), IncomePerMinute = city.IncomePerMinute, Conquered = state.Conquered[city.Id] == true, Stationed = stationedSoldierCount(state, city.Id) > 0, StationedCount = stationedSoldierCount(state, city.Id), ActiveHere = state.ArmyLocation == city.Id, Distance = math.floor((city.Position - armyPosition(state.ArmyLocation)).Magnitude), Target = state.ArmyDestination == city.Id} end
     return summary
 end
 local function snapshot(player, state)
@@ -166,9 +175,9 @@ local function addWeapon(model, level, base, stats)
     end
 end
 
-local function addSoldierVisual(player, level, ordinal, origin)
+local function addSoldierVisual(player, level, ordinal, origin, targetFolder, mergeable)
     local world = workspace:FindFirstChild("MergeDominionWorld"); if not world then return end
-    local folder = world:FindFirstChild("Units_" .. player.UserId); if not folder then folder = Instance.new("Folder"); folder.Name = "Units_" .. player.UserId; folder.Parent = world end
+    local folder = targetFolder or world:FindFirstChild("Units_" .. player.UserId); if not folder then folder = Instance.new("Folder"); folder.Name = "Units_" .. player.UserId; folder.Parent = world end
     local stats = GameConfig.SoldierStats[level]; local model = Instance.new("Model"); model.Name = "Soldier_L" .. level; model:SetAttribute("OwnerUserId", player.UserId); model:SetAttribute("Level", level); model:SetAttribute("MaxHealth", stats.Health); model:SetAttribute("Health", stats.Health); model:SetAttribute("SoldierId", string.format("%d_%d_%d", player.UserId, level, ordinal)); model.Parent = folder
     origin = origin or GameConfig.SoldierYardPosition
     local position = origin + Vector3.new(-12 + (ordinal % 8) * 4, 0, -8 + math.floor(ordinal / 8) * 5)
@@ -208,12 +217,14 @@ local function addSoldierVisual(player, level, ordinal, origin)
     addWeapon(model, level, base, stats)
     addHealthBar(model, torso, stats.Health)
 
-    local card = Instance.new("BillboardGui"); card.Name, card.Size, card.StudsOffset, card.AlwaysOnTop, card.MaxDistance, card.Adornee, card.Parent = "SoldierCard", UDim2.fromOffset(112, 42), Vector3.new(0, 3.25, 0), true, 90, torso, model
-    local frame = Instance.new("Frame"); frame.Size, frame.BackgroundColor3, frame.BackgroundTransparency, frame.BorderSizePixel, frame.Parent = UDim2.fromScale(1, 1), Color3.fromRGB(21, 31, 45), 0.12, 0, card; local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(0, 8); corner.Parent = frame; local stroke = Instance.new("UIStroke"); stroke.Color, stroke.Thickness, stroke.Parent = stats.AccentColor, 1.5, frame
-    local identity = Instance.new("TextLabel"); identity.BackgroundTransparency, identity.Size, identity.Position, identity.Text, identity.Font, identity.TextColor3, identity.TextSize, identity.TextXAlignment, identity.Parent = 1, UDim2.new(1, -8, 0, 17), UDim2.fromOffset(4, 3), stats.Name, Enum.Font.GothamBold, stats.AccentColor, 12, Enum.TextXAlignment.Center, frame
-    local levelText = Instance.new("TextLabel"); levelText.BackgroundTransparency, levelText.Size, levelText.Position, levelText.Text, levelText.Font, levelText.TextColor3, levelText.TextSize, levelText.TextXAlignment, levelText.Parent = 1, UDim2.new(1, -8, 0, 16), UDim2.fromOffset(4, 20), "LEVEL " .. level, Enum.Font.GothamMedium, Color3.fromRGB(235, 242, 249), 11, Enum.TextXAlignment.Center, frame
-    local prompt = Instance.new("ProximityPrompt"); prompt.Name, prompt.ActionText, prompt.ObjectText, prompt.KeyboardKeyCode, prompt.HoldDuration, prompt.MaxActivationDistance, prompt.RequiresLineOfSight, prompt.Parent = "MergePrompt", "Select / Merge", stats.Name .. " • Level " .. level, Enum.KeyCode.E, 0, 10, false, torso
-    prompt.Triggered:Connect(function(triggeringPlayer) if handleSoldierPrompt then handleSoldierPrompt(triggeringPlayer, model) end end)
+    if mergeable ~= false then
+        local card = Instance.new("BillboardGui"); card.Name, card.Size, card.StudsOffset, card.AlwaysOnTop, card.MaxDistance, card.Adornee, card.Parent = "SoldierCard", UDim2.fromOffset(112, 42), Vector3.new(0, 3.25, 0), true, 90, torso, model
+        local frame = Instance.new("Frame"); frame.Size, frame.BackgroundColor3, frame.BackgroundTransparency, frame.BorderSizePixel, frame.Parent = UDim2.fromScale(1, 1), Color3.fromRGB(21, 31, 45), 0.12, 0, card; local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(0, 8); corner.Parent = frame; local stroke = Instance.new("UIStroke"); stroke.Color, stroke.Thickness, stroke.Parent = stats.AccentColor, 1.5, frame
+        local identity = Instance.new("TextLabel"); identity.BackgroundTransparency, identity.Size, identity.Position, identity.Text, identity.Font, identity.TextColor3, identity.TextSize, identity.TextXAlignment, identity.Parent = 1, UDim2.new(1, -8, 0, 17), UDim2.fromOffset(4, 3), stats.Name, Enum.Font.GothamBold, stats.AccentColor, 12, Enum.TextXAlignment.Center, frame
+        local levelText = Instance.new("TextLabel"); levelText.BackgroundTransparency, levelText.Size, levelText.Position, levelText.Text, levelText.Font, levelText.TextColor3, levelText.TextSize, levelText.TextXAlignment, levelText.Parent = 1, UDim2.new(1, -8, 0, 16), UDim2.fromOffset(4, 20), "LEVEL " .. level, Enum.Font.GothamMedium, Color3.fromRGB(235, 242, 249), 11, Enum.TextXAlignment.Center, frame
+        local prompt = Instance.new("ProximityPrompt"); prompt.Name, prompt.ActionText, prompt.ObjectText, prompt.KeyboardKeyCode, prompt.HoldDuration, prompt.MaxActivationDistance, prompt.RequiresLineOfSight, prompt.Parent = "MergePrompt", "Select / Merge", stats.Name .. " • Level " .. level, Enum.KeyCode.E, 0, 10, false, torso
+        prompt.Triggered:Connect(function(triggeringPlayer) if handleSoldierPrompt then handleSoldierPrompt(triggeringPlayer, model) end end)
+    end
 end
 local function playMergeEffect(position, color)
     local world = workspace:FindFirstChild("MergeDominionWorld"); if not world then return end
@@ -227,9 +238,19 @@ end
 local function syncSoldierVisuals(player, state, mergePosition, mergeColor)
     clearMergeSelection(player); local world = workspace:FindFirstChild("MergeDominionWorld"); if not world then return end
     local oldFolder = world:FindFirstChild("Units_" .. player.UserId); if oldFolder then oldFolder:Destroy() end
+    local oldGarrisonFolder = world:FindFirstChild("Garrisons_" .. player.UserId); if oldGarrisonFolder then oldGarrisonFolder:Destroy() end
     local ordinal = 0
     local origin = armyPosition(state.ArmyLocation)
     for level = 1, GameConfig.MaxSoldierLevel do for _ = 1, state.Soldiers[level] do addSoldierVisual(player, level, ordinal, origin); ordinal += 1 end end
+    local garrisonFolder = Instance.new("Folder"); garrisonFolder.Name, garrisonFolder.Parent = "Garrisons_" .. player.UserId, world
+    for _, city in ipairs(GameConfig.EnemyCities) do
+        local stationed = state.StationedSoldiers and state.StationedSoldiers[city.Id]
+        if stationed and stationedSoldierCount(state, city.Id) > 0 then
+            local cityFolder = Instance.new("Folder"); cityFolder.Name, cityFolder.Parent = city.Id, garrisonFolder
+            local garrisonOrdinal = 0; local cityOrigin = city.Position + Vector3.new(0, 2, 0)
+            for level = 1, GameConfig.MaxSoldierLevel do for _ = 1, stationed[level] or 0 do addSoldierVisual(player, level, garrisonOrdinal, cityOrigin, cityFolder, false); garrisonOrdinal += 1 end end
+        end
+    end
     if mergePosition then playMergeEffect(mergePosition, mergeColor or Color3.fromRGB(255, 225, 89)) end
 end
 
@@ -248,9 +269,10 @@ handleSoldierPrompt = function(player, model)
     state.Soldiers[level] -= 2; state.Soldiers[level + 1] += 1; syncSoldierVisuals(player, state, mergePosition, GameConfig.SoldierStats[level + 1].AccentColor); resultEvent:FireClient(player, {Message = "Two Level " .. level .. " soldiers merged into Level " .. (level + 1) .. "."}); sendState(player)
 end
 local function cleanupSoldierVisuals(player)
-    clearMergeSelection(player); local world = workspace:FindFirstChild("MergeDominionWorld"); local folder = world and world:FindFirstChild("Units_" .. player.UserId); if folder then folder:Destroy() end
+    clearMergeSelection(player); local world = workspace:FindFirstChild("MergeDominionWorld"); local folder = world and world:FindFirstChild("Units_" .. player.UserId); if folder then folder:Destroy() end; local garrisonFolder = world and world:FindFirstChild("Garrisons_" .. player.UserId); if garrisonFolder then garrisonFolder:Destroy() end
 end
 
+local stationOneSoldier
 local function setCityConquered(city, player)
     local world = workspace:FindFirstChild("MergeDominionWorld"); local model = world and world:FindFirstChild(city.Id); if not model then return end
     model:SetAttribute("Conquered", true); model:SetAttribute("ConqueredByUserId", player.UserId)
@@ -261,7 +283,21 @@ local function setCityConquered(city, player)
     local badge = badgeAnchor:FindFirstChild("ControlledBadge") or Instance.new("BillboardGui"); badge.Name, badge.Size, badge.StudsOffset, badge.AlwaysOnTop, badge.MaxDistance, badge.Adornee, badge.Parent = "ControlledBadge", UDim2.fromOffset(240, 42), Vector3.new(0, 0, 0), true, 400, badgeAnchor, badgeAnchor
     local badgeText = badge:FindFirstChild("Text") or Instance.new("TextLabel"); badgeText.Name, badgeText.BackgroundTransparency, badgeText.Size, badgeText.Text, badgeText.TextColor3, badgeText.TextScaled, badgeText.Font, badgeText.Parent = "Text", 1, UDim2.fromScale(1, 1), "CONTROLLED • +" .. city.IncomePerMinute .. "/MIN", Color3.fromRGB(139, 255, 190), true, Enum.Font.GothamBold, badge
     local prompt = model:FindFirstChild("AttackPrompt", true); if prompt then prompt.ActionText, prompt.ObjectText = "Controlled Base", city.Name .. " • +" .. city.IncomePerMinute .. "/min" end
+    local garrisonPrompt = model:FindFirstChild("GarrisonPrompt", true) or Instance.new("ProximityPrompt")
+    garrisonPrompt.Name, garrisonPrompt.ActionText, garrisonPrompt.ObjectText, garrisonPrompt.KeyboardKeyCode, garrisonPrompt.HoldDuration, garrisonPrompt.MaxActivationDistance, garrisonPrompt.RequiresLineOfSight, garrisonPrompt.Parent = "GarrisonPrompt", "Station 1 Soldier", city.Name .. " Garrison", Enum.KeyCode.E, 0, 14, false, model:FindFirstChild("DefenderSpawn") or model:FindFirstChild("CityGate") or model
+    if not garrisonPrompt:GetAttribute("ServerConnected") then garrisonPrompt:SetAttribute("ServerConnected", true); garrisonPrompt.Triggered:Connect(function(triggeringPlayer) if stationOneSoldier then stationOneSoldier(triggeringPlayer, city) end end) end
     local defenders = model:FindFirstChild("Defenders"); if defenders then defenders:Destroy() end
+end
+
+stationOneSoldier = function(player, city)
+    local state = DataService.get(player); if not state or not state.Conquered[city.Id] then return end
+    if state.ArmyLocation ~= city.Id or state.ArmyStatus == "Traveling" or state.ArmyStatus == "Arriving" or state.ArmyStatus == "Fighting" then resultEvent:FireClient(player, {Message = "Your active army must be safely stationed at this base first."}); return end
+    local levelToStation
+    for level = 1, GameConfig.MaxSoldierLevel do if state.Soldiers[level] > 0 then levelToStation = level; break end end
+    if not levelToStation then resultEvent:FireClient(player, {Message = "No active soldiers are available to station."}); return end
+    state.Soldiers[levelToStation] -= 1; state.StationedSoldiers[city.Id] = state.StationedSoldiers[city.Id] or {}
+    state.StationedSoldiers[city.Id][levelToStation] = (state.StationedSoldiers[city.Id][levelToStation] or 0) + 1
+    syncSoldierVisuals(player, state); resultEvent:FireClient(player, {Message = "A Level " .. levelToStation .. " soldier is now stationed inside " .. city.Name .. "."}); sendState(player)
 end
 local function createDestinationMarker(city)
     local campaign = world:FindFirstChild("CampaignMarkers") or Instance.new("Folder"); campaign.Name, campaign.Parent = "CampaignMarkers", world
@@ -387,7 +423,7 @@ local function attackCity(player, city)
     local state = DataService.get(player); if not state then return end
     if state.Conquered[city.Id] then resultEvent:FireClient(player, {Message = city.Name .. " is already controlled. +" .. city.IncomePerMinute .. " coins/min."}); return end
     if state.ArmyStatus == "Traveling" or state.ArmyStatus == "Arriving" or state.ArmyStatus == "Fighting" then resultEvent:FireClient(player, {Message = "Your army is already on a campaign."}); return end
-    if totalSoldiers(state) <= 0 then resultEvent:FireClient(player, {Message = "You need at least one soldier before attacking."}); return end
+    if activeSoldiers(state) <= 0 then resultEvent:FireClient(player, {Message = "You need at least one active soldier before attacking. Stationed soldiers remain safely assigned to their bases."}); return end
     local now = os.clock(); local readyAt = cityCooldowns[player] or 0
     if now < readyAt then resultEvent:FireClient(player, {Message = "Battle cooldown: " .. math.ceil(readyAt - now) .. "s remaining."}); return end
     cityCooldowns[player] = now + GameConfig.CityAttackCooldown

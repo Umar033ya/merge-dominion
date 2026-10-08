@@ -30,7 +30,7 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 - Combat compares total player attack to the target's fixed defender attack; ties win and outcomes are shown in the HUD.
 - Player and enemy soldiers now carry server-authoritative `Health` and `MaxHealth` attributes derived from level, with compact overhead health bars. Battle pulses apply real damage to both sides and remove defeated models; the existing power resolution remains the final outcome authority.
 - Victories mark an enemy city conquered, award its configured reward, and unlock that city's passive income.
-- Currency, Level 1–20 soldier counts, speed upgrades, spawn level, and conquered city IDs are saved in `MergeDominion_MVP_v1`.
+- Currency, mobile Level 1–20 soldier counts, per-city `StationedSoldiers` garrisons, speed upgrades, spawn level, and conquered city IDs are saved in `MergeDominion_MVP_v1`; sanitization preserves the global 20-soldier capacity.
 
 ## Phase 2 world foundation
 
@@ -49,17 +49,18 @@ Merge Dominion is an original Roblox PvE conquest MVP. Players generate Level 1 
 - City victories are calculated by the server from the player's current Level 1–20 army and the configured defender army. A short server cooldown prevents attack spam.
 - Pressing an attack prompt starts a server-controlled `Traveling` sequence. The existing player soldier models preserve formation offsets, follow the connected road route (including a Main Base junction for city-to-city travel), rotate toward the route, and use a lightweight run/bob motion instead of sliding. A temporary destination marker identifies the target.
 - Campaign phases are explicit: `Traveling` → `Arriving` → `Fighting` → `Stationed`. The `Fighting` presentation highlights both armies, pulses their positions, and emits bounded hit particles and brief `HIT` indicators before the existing power calculation resolves.
-- A defeat does not damage or conquer the permanent Main Base. It removes a temporary fraction of the player's soldiers, leaves surviving models stationed at the battle city, and reports the player/enemy power comparison.
+- A defeat does not damage or conquer the permanent Main Base. Actual battle HP removes defeated active soldiers, leaves survivors at the battle city, and reports the player/enemy power comparison.
 - Conquered cities are stored in the existing `Conquered` state table and pay their configured income once per minute per player. The MENU shows each city's income and the total passive income per minute.
-- A victory removes the visible enemy defenders, changes the city flag and gate to player colors, enables a subtle player territory ring, adds a `CONTROLLED` income badge, updates the city prompt, sets the city as a controlled base, and leaves the surviving player army stationed there instead of returning it to Main Base.
-- The MENU reports the stationed soldier count, controlled-city income, and total passive income.
+- A victory removes the visible enemy defenders, changes the city flag and gate to player colors, enables a subtle player territory ring, adds a `CONTROLLED` income badge, updates the city prompt, sets the city as a controlled base, and leaves the surviving active army there instead of returning it to Main Base.
+- Controlled cities expose a server-owned `E — Station 1 Soldier` prompt. Each use moves one lowest-level active soldier into that city's persistent garrison, allowing the remaining army to travel onward while the assigned soldier stays visible inside the city courtyard.
+- The MENU reports every controlled city's persistent garrison count, whether the active army is there, controlled-city income, and total passive income.
 - Enemy defenders use the same level-colored soldier silhouette style as player units, expose level labels and health bars, and perform lightweight patrol motion on the shared server Heartbeat. During an attack they stage near the battle area and are marked as active combatants.
 
 ## Army travel and controlled-base network
 
-- The existing soldier inventory remains the only authoritative army; no duplicate inventory or NPC system was added.
+- `Soldiers` remains the authoritative mobile inventory and `StationedSoldiers[cityId]` is the authoritative persistent garrison inventory; visible models are rebuilt from those server state tables, not treated as independent NPC state.
 - Persisted state now includes `ArmyLocation`, `ArmyStatus`, and a validated transient `ArmyDestination`. Valid runtime statuses are `Idle`, `Traveling`, `Arriving`, `Fighting`, and `Stationed`; legacy saves default safely to `MainBase` and `Idle`.
-- New attacks launch from the current army location. After a victory, the next attack can begin from the newly conquered city. After a defeat, surviving soldiers remain at the battle location and the position is retained for the next session.
+- New attacks launch from the current active army location. After stationing any desired soldiers, the remaining army can attack from the newly conquered city. Previously controlled cities and their garrisons remain owned and visible when the active army moves onward; both ownership and garrisons are retained for the next session.
 - Generation and merging remain server-authoritative. During travel/battle, visual resynchronization waits until the sequence completes so the marching army is not teleported back by a timer tick.
 
 ## Automatic soldier progression
