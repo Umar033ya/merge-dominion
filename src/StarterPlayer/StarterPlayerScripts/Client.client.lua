@@ -20,12 +20,12 @@ end
 
 local gui = Instance.new("ScreenGui"); gui.Name, gui.ResetOnSpawn, gui.Parent = "MergeDominionUI", false, player:WaitForChild("PlayerGui")
 local function panel(parent, size, position, color) local f = Instance.new("Frame"); f.Size, f.Position, f.BackgroundColor3, f.BorderSizePixel, f.Parent = size, position, color, 0, parent; local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 12); c.Parent = f; return f end
-local function text(parent, value, size, position, font, color) local t = Instance.new("TextLabel"); t.BackgroundTransparency, t.Size, t.Position, t.Text, t.Font, t.TextColor3, t.TextSize, t.TextXAlignment, t.Parent = 1, size, position, value, font or Enum.Font.Gotham, color or Color3.new(1,1,1), 16, Enum.TextXAlignment.Left, parent; return t end
-local function button(parent, value, size, position, color) local b = Instance.new("TextButton"); b.Size, b.Position, b.Text, b.Font, b.TextColor3, b.TextSize, b.BackgroundColor3, b.AutoButtonColor, b.Parent = size, position, value, Enum.Font.GothamBold, Color3.new(1,1,1), 14, color, true, parent; local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 8); c.Parent = b; return b end
+local function text(parent, value, size, position, font, color) local t = Instance.new("TextLabel"); t.BackgroundTransparency, t.Size, t.Position, t.Text, t.Font, t.TextColor3, t.TextSize, t.TextXAlignment, t.TextStrokeTransparency, t.Parent = 1, size, position, value, font or Enum.Font.Gotham, color or Color3.new(1,1,1), 16, Enum.TextXAlignment.Left, 0.7, parent; return t end
+local function button(parent, value, size, position, color) local b = Instance.new("TextButton"); b.Size, b.Position, b.Text, b.Font, b.TextColor3, b.TextSize, b.BackgroundColor3, b.AutoButtonColor, b.TextStrokeTransparency, b.Parent = size, position, value, Enum.Font.GothamBold, Color3.new(1,1,1), 14, color, true, 0.55, parent; local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 8); c.Parent = b; return b end
 local function formatTime(seconds) seconds = math.max(0, math.floor(tonumber(seconds) or 0)); return string.format("%02d:%02d", math.floor(seconds / 60), seconds % 60) end
 
 local menuButton = button(gui, "MENU", UDim2.fromOffset(112, 42), UDim2.fromOffset(24, 24), Color3.fromRGB(43, 143, 207))
-local root = panel(gui, UDim2.fromOffset(450, 800), UDim2.fromOffset(24, 76), Color3.fromRGB(17, 25, 36)); root.Visible = false
+local root = panel(gui, UDim2.fromOffset(450, 800), UDim2.fromOffset(24, 76), Color3.fromRGB(17, 25, 36)); local rootStroke = Instance.new("UIStroke"); rootStroke.Color, rootStroke.Thickness, rootStroke.Transparency, rootStroke.Parent = Color3.fromRGB(79, 161, 214), 1, 0.35, root; root.Visible = false
 local menuOpen = false
 local function setMenuOpen(open) menuOpen = open; root.Visible = open; menuButton.Text = open and "CLOSE MENU" or "MENU" end
 menuButton.MouseButton1Click:Connect(function() setMenuOpen(not menuOpen) end)

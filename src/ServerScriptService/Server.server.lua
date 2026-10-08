@@ -153,13 +153,14 @@ local function meshSoldierPart(model, name, size, position, color, material, mes
     return item
 end
 local function addHealthBar(model, adornee, maxHealth)
-    local gui = Instance.new("BillboardGui"); gui.Name, gui.Size, gui.StudsOffset, gui.AlwaysOnTop, gui.MaxDistance, gui.Adornee, gui.Parent = "HealthBar", UDim2.fromOffset(54, 8), Vector3.new(0, 4.5, 0), true, 120, adornee, model
-    local background = Instance.new("Frame"); background.Name, background.Size, background.BackgroundColor3, background.BorderSizePixel, background.Parent = "Background", UDim2.fromScale(1, 1), Color3.fromRGB(30, 35, 40), 0, gui
-    local fill = Instance.new("Frame"); fill.Name, fill.Size, fill.BackgroundColor3, fill.BorderSizePixel, fill.Parent = "Fill", UDim2.fromScale(1, 1), Color3.fromRGB(80, 220, 115), 0, background
+    local gui = Instance.new("BillboardGui"); gui.Name, gui.Size, gui.StudsOffset, gui.AlwaysOnTop, gui.MaxDistance, gui.Adornee, gui.Parent = "HealthBar", UDim2.fromOffset(62, 10), Vector3.new(0, 4.8, 0), true, 120, adornee, model
+    local background = Instance.new("Frame"); background.Name, background.Size, background.BackgroundColor3, background.BackgroundTransparency, background.BorderSizePixel, background.Parent = "Background", UDim2.fromScale(1, 1), Color3.fromRGB(12, 18, 25), 0.12, 0, gui
+    local backgroundStroke = Instance.new("UIStroke"); backgroundStroke.Color, backgroundStroke.Thickness, backgroundStroke.Transparency, backgroundStroke.Parent = Color3.fromRGB(235, 245, 255), 1, 0.15, background
+    local fill = Instance.new("Frame"); fill.Name, fill.Size, fill.BackgroundColor3, fill.BorderSizePixel, fill.Parent = "Fill", UDim2.fromScale(1, 1), model:GetAttribute("Faction") == "Garrison" and Color3.fromRGB(255, 213, 82) or Color3.fromRGB(72, 235, 130), 0, background
 end
 local function updateHealthBar(model)
     local maxHealth, health = model:GetAttribute("MaxHealth") or 1, math.max(0, model:GetAttribute("Health") or 0); local fill = model:FindFirstChild("HealthBar") and model.HealthBar:FindFirstChild("Background") and model.HealthBar.Background:FindFirstChild("Fill")
-    if fill then fill.Size = UDim2.new(math.clamp(health / maxHealth, 0, 1), 0, 1, 0); fill.BackgroundColor3 = health / maxHealth > 0.5 and Color3.fromRGB(80, 220, 115) or Color3.fromRGB(245, 180, 70) end
+    if fill then fill.Size = UDim2.new(math.clamp(health / maxHealth, 0, 1), 0, 1, 0); fill.BackgroundColor3 = health / maxHealth > 0.5 and (model:GetAttribute("Faction") == "Garrison" and Color3.fromRGB(255, 213, 82) or Color3.fromRGB(72, 235, 130)) or Color3.fromRGB(255, 178, 70) end
 end
 
 local function addWeapon(model, level, base, stats)
@@ -178,7 +179,8 @@ end
 local function addSoldierVisual(player, level, ordinal, origin, targetFolder, mergeable)
     local world = workspace:FindFirstChild("MergeDominionWorld"); if not world then return end
     local folder = targetFolder or world:FindFirstChild("Units_" .. player.UserId); if not folder then folder = Instance.new("Folder"); folder.Name = "Units_" .. player.UserId; folder.Parent = world end
-    local stats = GameConfig.SoldierStats[level]; local model = Instance.new("Model"); model.Name = "Soldier_L" .. level; model:SetAttribute("OwnerUserId", player.UserId); model:SetAttribute("Level", level); model:SetAttribute("MaxHealth", stats.Health); model:SetAttribute("Health", stats.Health); model:SetAttribute("SoldierId", string.format("%d_%d_%d", player.UserId, level, ordinal)); model.Parent = folder
+    local stats = GameConfig.SoldierStats[level]; if mergeable == false then stats = table.clone(stats); stats.Color = stats.Color:Lerp(Color3.fromRGB(255, 220, 115), 0.18); stats.AccentColor = Color3.fromRGB(255, 213, 82) end
+    local model = Instance.new("Model"); model.Name = "Soldier_L" .. level; model:SetAttribute("OwnerUserId", player.UserId); model:SetAttribute("Level", level); model:SetAttribute("Faction", mergeable == false and "Garrison" or "Player"); model:SetAttribute("MaxHealth", stats.Health); model:SetAttribute("Health", stats.Health); model:SetAttribute("SoldierId", string.format("%d_%d_%d", player.UserId, level, ordinal)); model.Parent = folder
     origin = origin or GameConfig.SoldierYardPosition
     local position = origin + Vector3.new(-12 + (ordinal % 8) * 4, 0, -8 + math.floor(ordinal / 8) * 5)
     local base = position + Vector3.new(0, 0.6, 0)
@@ -276,6 +278,8 @@ local stationOneSoldier
 local function setCityConquered(city, player)
     local world = workspace:FindFirstChild("MergeDominionWorld"); local model = world and world:FindFirstChild(city.Id); if not model then return end
     model:SetAttribute("Conquered", true); model:SetAttribute("ConqueredByUserId", player.UserId)
+    local controlledHighlight = model:FindFirstChild("ControlledHighlight") or Instance.new("Highlight"); controlledHighlight.Name, controlledHighlight.FillColor, controlledHighlight.OutlineColor, controlledHighlight.FillTransparency, controlledHighlight.OutlineTransparency, controlledHighlight.DepthMode, controlledHighlight.Parent = "ControlledHighlight", Color3.fromRGB(67, 157, 235), Color3.fromRGB(151, 231, 255), 0.94, 0.08, Enum.HighlightDepthMode.Occluded, model
+    local foundation = model:FindFirstChild("CityFoundation"); if foundation then foundation.Color = Color3.fromRGB(57, 105, 145) end
     local flag = model:FindFirstChild("CityFlag"); if flag then flag.Color = Color3.fromRGB(114, 205, 245) end
     local gate = model:FindFirstChild("CityGate"); if gate then gate.Color = Color3.fromRGB(45, 126, 205) end
     local territory = model:FindFirstChild("TerritoryRing"); if territory then territory.Transparency = 0.78; territory.Color = Color3.fromRGB(114, 205, 245) end

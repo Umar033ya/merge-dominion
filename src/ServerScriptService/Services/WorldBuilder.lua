@@ -52,9 +52,10 @@ local function checkpoint(parent, id, name, position)
     label(model, "CHECKPOINT\n" .. name, position + Vector3.new(0, 3, 0), Color3.fromRGB(255, 241, 164), 220)
 end
 local function addHealthBar(parent, adornee, maxHealth)
-    local gui = Instance.new("BillboardGui"); gui.Name, gui.Size, gui.StudsOffset, gui.AlwaysOnTop, gui.MaxDistance, gui.Adornee, gui.Parent = "HealthBar", UDim2.fromOffset(54, 8), Vector3.new(0, 4.5, 0), true, 120, adornee, parent
-    local background = Instance.new("Frame"); background.Name, background.Size, background.BackgroundColor3, background.BorderSizePixel, background.Parent = "Background", UDim2.fromScale(1, 1), Color3.fromRGB(30, 35, 40), 0, gui
-    local fill = Instance.new("Frame"); fill.Name, fill.Size, fill.BackgroundColor3, fill.BorderSizePixel, fill.Parent = "Fill", UDim2.fromScale(1, 1), Color3.fromRGB(80, 220, 115), 0, background
+    local gui = Instance.new("BillboardGui"); gui.Name, gui.Size, gui.StudsOffset, gui.AlwaysOnTop, gui.MaxDistance, gui.Adornee, gui.Parent = "HealthBar", UDim2.fromOffset(62, 10), Vector3.new(0, 4.8, 0), true, 120, adornee, parent
+    local background = Instance.new("Frame"); background.Name, background.Size, background.BackgroundColor3, background.BackgroundTransparency, background.BorderSizePixel, background.Parent = "Background", UDim2.fromScale(1, 1), Color3.fromRGB(12, 18, 25), 0.12, 0, gui
+    local backgroundStroke = Instance.new("UIStroke"); backgroundStroke.Color, backgroundStroke.Thickness, backgroundStroke.Transparency, backgroundStroke.Parent = Color3.fromRGB(235, 245, 255), 1, 0.15, background
+    local fill = Instance.new("Frame"); fill.Name, fill.Size, fill.BackgroundColor3, fill.BorderSizePixel, fill.Parent = "Fill", UDim2.fromScale(1, 1), Color3.fromRGB(255, 92, 78), 0, background
     gui:SetAttribute("MaxHealth", maxHealth)
 end
 local function mainBase(world)
@@ -68,26 +69,26 @@ local function mainBase(world)
     part(yard, "YardFloor", Vector3.new(38, 0.4, 24), y + Vector3.new(0, 0.2, 0), COLORS.GroundAccent, Enum.Material.Ground); part(yard, "YardBorderFront", Vector3.new(38, 1.2, 1), y + Vector3.new(0, 0.8, -12), COLORS.MainLight, Enum.Material.Neon); part(yard, "YardBorderBack", Vector3.new(38, 1.2, 1), y + Vector3.new(0, 0.8, 12), COLORS.MainLight, Enum.Material.Neon); label(yard, "SOLDIER YARD • CREATE & MERGE", y + Vector3.new(0, 4, 0), Color3.fromRGB(203, 255, 214), 280)
 end
 local function defenderModel(parent, city, level, ordinal, position, theme)
-    local stats = GameConfig.SoldierStats[level]; local model = Instance.new("Model"); model.Name = "Defender_L" .. level .. "_" .. ordinal; model:SetAttribute("EnemyLevel", level); model:SetAttribute("MaxHealth", stats.Health); model:SetAttribute("Health", stats.Health); model:SetAttribute("PatrolOrigin", position); model:SetAttribute("PatrolPhase", ordinal * 0.7); model.Parent = parent
+    local stats = GameConfig.SoldierStats[level]; local enemyStats = table.clone(stats); enemyStats.Color = theme.Wall:Lerp(stats.Color, 0.28); enemyStats.AccentColor = theme.Accent; local model = Instance.new("Model"); model.Name = "Defender_L" .. level .. "_" .. ordinal; model:SetAttribute("EnemyLevel", level); model:SetAttribute("Faction", "Enemy"); model:SetAttribute("MaxHealth", stats.Health); model:SetAttribute("Health", stats.Health); model:SetAttribute("PatrolOrigin", position); model:SetAttribute("PatrolPhase", ordinal * 0.7); model.Parent = parent
     local function mesh(name, size, offset, color, meshType)
         local item = part(model, name, size, position + offset, color, Enum.Material.SmoothPlastic); local meshObject = Instance.new("SpecialMesh"); meshObject.MeshType = meshType or Enum.MeshType.FileMesh; meshObject.Scale = Vector3.new(1, 1, 1); meshObject.Parent = item; return item
     end
-    local torso = mesh("Torso", Vector3.new(1.55, 2, 1.05), Vector3.new(0, 2.2, 0), stats.Color, Enum.MeshType.Torso)
+    local torso = mesh("Torso", Vector3.new(1.55, 2, 1.05), Vector3.new(0, 2.2, 0), enemyStats.Color, Enum.MeshType.Torso)
     mesh("LeftLeg", Vector3.new(0.5, 1.4, 0.6), Vector3.new(-0.4, 0.7, 0), Color3.fromRGB(42, 57, 76), Enum.MeshType.Cylinder)
     mesh("RightLeg", Vector3.new(0.5, 1.4, 0.6), Vector3.new(0.4, 0.7, 0), Color3.fromRGB(42, 57, 76), Enum.MeshType.Cylinder)
     mesh("Head", Vector3.new(1.35, 1.35, 1.25), Vector3.new(0, 4, 0), Color3.fromRGB(255, 205, 164), Enum.MeshType.Head)
-    mesh("Helmet", Vector3.new(1.6, 0.6, 1.45), Vector3.new(0, 4.7, 0), stats.AccentColor, Enum.MeshType.Sphere)
-    mesh("LeftArm", Vector3.new(0.5, 1.6, 0.55), Vector3.new(-1, 2.2, 0), stats.Color, Enum.MeshType.Cylinder)
-    mesh("RightArm", Vector3.new(0.5, 1.6, 0.55), Vector3.new(1, 2.2, 0), stats.Color, Enum.MeshType.Cylinder)
-    part(model, "Weapon", Vector3.new(0.18, 2.1, 0.18), position + Vector3.new(0.9, 1.5, -0.1), stats.AccentColor, Enum.Material.Metal)
+    mesh("Helmet", Vector3.new(1.6, 0.6, 1.45), Vector3.new(0, 4.7, 0), enemyStats.AccentColor, Enum.MeshType.Sphere)
+    mesh("LeftArm", Vector3.new(0.5, 1.6, 0.55), Vector3.new(-1, 2.2, 0), enemyStats.Color, Enum.MeshType.Cylinder)
+    mesh("RightArm", Vector3.new(0.5, 1.6, 0.55), Vector3.new(1, 2.2, 0), enemyStats.Color, Enum.MeshType.Cylinder)
+    part(model, "Weapon", Vector3.new(0.18, 2.1, 0.18), position + Vector3.new(0.9, 1.5, 0), enemyStats.AccentColor, Enum.Material.Metal)
     addHealthBar(model, torso, stats.Health)
-    label(model, stats.Name .. " • L" .. level, position + Vector3.new(0, 3.6, 0), stats.AccentColor, 110)
+    label(model, stats.Name .. " • L" .. level, position + Vector3.new(0, 3.6, 0), enemyStats.AccentColor, 110)
     return model
 end
 local function cityZone(world, index, city)
     local model = Instance.new("Model"); model.Name, model.Parent = city.Id, world; model:SetAttribute("CityId", city.Id); model:SetAttribute("BaseType", "EnemyCity"); model:SetAttribute("Difficulty", index); model:SetAttribute("IncomePerMinute", city.IncomePerMinute); model:SetAttribute("Conquered", false)
     local theme = CITY_COLORS[city.Theme] or CITY_COLORS.Stone; local position = city.Position; local footprint = 32 + math.min(index, 8) * 2
-    part(model, "CityFoundation", Vector3.new(footprint, 2, footprint), position + Vector3.new(0, 1, 0), COLORS.Stone, Enum.Material.Concrete)
+    part(model, "CityFoundation", Vector3.new(footprint, 2, footprint), position + Vector3.new(0, 1, 0), theme.Wall:Lerp(COLORS.Stone, 0.35), Enum.Material.Concrete)
     local territory = part(model, "TerritoryRing", Vector3.new(footprint - 4, 0.12, footprint - 4), position + Vector3.new(0, 2.08, 0), Color3.fromRGB(114, 205, 245), Enum.Material.Neon); territory.Shape, territory.Transparency, territory.CanCollide, territory.CanTouch, territory.CanQuery = Enum.PartType.Cylinder, 1, false, false, false
     for building = 1, 5 do local x = ((building - 1) % 3 - 1) * (footprint / 3); local z = (math.floor((building - 1) / 3) - 0.5) * (footprint / 2); local height = 7 + ((building + index) % 3) * 3; part(model, "CityBuilding", Vector3.new(7, height, 7), position + Vector3.new(x, 2 + height / 2, z), theme.Wall, Enum.Material.Brick); part(model, "BuildingRoof", Vector3.new(8, 1.2, 8), position + Vector3.new(x, 2 + height + 0.6, z), theme.Accent, Enum.Material.Slate) end
     local towerHeight = 12 + index * 1.5
